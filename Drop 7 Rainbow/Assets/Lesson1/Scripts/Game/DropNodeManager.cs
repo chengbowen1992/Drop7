@@ -21,9 +21,13 @@ namespace Lesson1
         public int[,] BombMap = new int[HEIGHT, WIDTH];     //爆炸 统计
         public int[,] MoveMap = new int[HEIGHT, WIDTH];     //移动 统计
 
+        private int[,] BottomArray = new int[HEIGHT,WIDTH];        //底部 填充
+        private int BottomHeight = 0;
+
         public List<DropNode> BombList = new List<DropNode>();  //爆炸列表
         public List<DropNode> BombedList = new List<DropNode>(); //爆炸波及列表
-
+        public List<DropNode> OutList = new List<DropNode>();    //超出区域列表
+        
         public Random randomMgr;
 
         #region  执行操作
@@ -39,7 +43,10 @@ namespace Lesson1
             randomMgr = new Random(DateTime.Now.Millisecond);
             BombList.Clear();
             BombedList.Clear();
+            OutList.Clear();
+            
             OriginData = data;
+            BottomHeight = 0;
 
             for (int i = 0; i < HEIGHT; i++)
             {
@@ -47,7 +54,7 @@ namespace Lesson1
                 {
                     //初始化 移动 Map
                     //初始化 爆炸 Map
-                    HorizonMap[i, j] = VerticalMap[i, j] = MoveMap[i, j] = BombMap[i, j] = 0;
+                    HorizonMap[i, j] = VerticalMap[i, j] = MoveMap[i, j] = BombMap[i, j] = BottomArray[i, j] = 0;
                 }
             }
 
@@ -209,6 +216,68 @@ namespace Lesson1
         }
 
         /// <summary>
+        /// 从底部生成指定行数目
+        /// 不生成空元素
+        /// </summary>
+        /// <returns>是否游戏可以继续</returns>
+        public bool AddBottomLine(int lineHeight)
+        {
+            if(lineHeight <= 0)
+                return true;
+            
+            //为了便于测试，置于前方
+            ClearMap();
+
+            for (int i = HEIGHT - 1; i >= 0; i--)
+            {
+                for (int j = 0; j < WIDTH; j++)
+                {
+                    var toHeight = i + lineHeight;
+                    if (toHeight >= HEIGHT)
+                    {
+                        if (OriginData[i, j] != 0)
+                        {
+                            var outNode = CreateNode(new Vector2Int(j, toHeight), OriginData[i, j]);
+                            OutList.Add(outNode);
+                        }
+                    }
+                    else
+                    {
+                        OriginData[toHeight, j] = OriginData[i, j];
+                    }
+                }
+            }
+
+            BottomHeight = lineHeight;
+            for (int i = 0; i < lineHeight; i++)
+            {
+                for (int j = 0; j < WIDTH; j++)
+                {
+                    var randVal = -2/*randomMgr.Next(0, 10000) % 2 == 0 ? GetRandomNodeNum() : randomMgr.Next(-2, 0)*/;
+                    BottomArray[i, j] = randVal;
+                    OriginData[i, j] = BottomArray[i, j];
+                }
+            }
+            
+            UpdateAddBottom();
+            
+            return OutList.Count == 0;
+        }
+
+        private void UpdateAddBottom()
+        {
+            UpdateVerticalAll();
+            UpdateHorizonAll();
+            var bombAll = UpdateBombAll();
+            if (bombAll > 0)
+            {
+                int bombCount, showCount;
+                DealWithBomb(out bombCount, out showCount);
+                DealWitMove();
+            }
+        }
+
+        /// <summary>
         /// 清理临时计算的 爆炸 移动 数组 以及 爆炸列表
         /// </summary>
         private void ClearMap()
@@ -217,12 +286,13 @@ namespace Lesson1
             {
                 for (int j = 0; j < WIDTH; j++)
                 {
-                    BombMap[i, j] = MoveMap[i, j] = 0;
+                    BombMap[i, j] = MoveMap[i, j] = BottomArray[i, j] = 0;
                 }
             }
-
+            OutList.Clear();
             BombList.Clear();
             BombedList.Clear();
+            BottomHeight = 0;
         }
 
         private int GetRandomNodeNum()
@@ -230,8 +300,7 @@ namespace Lesson1
             return randomMgr.Next(1, MAX_NUM + 1);
 
         }
-
-
+        
         private DropNode CreateNode(Vector2Int pos, int val)
         {
             var node = new DropNode(pos, val);
@@ -412,8 +481,6 @@ namespace Lesson1
 
         #endregion
 
-        //TODO Create Bottom Row
-
         #region  测试
         public enum DebugInfoType 
         {
@@ -424,7 +491,9 @@ namespace Lesson1
             eBombMap,
             eBombList,
             eBombedList,
-
+            eBottomMap,
+            eOutList,
+            
             //Do not change
             eAll
         }
@@ -487,6 +556,14 @@ namespace Lesson1
                 case DebugInfoType.eBombedList:
                     stringBuilder.Append("\nBombedList\n");
                     _AppendListInfo(BombedList, stringBuilder);
+                    break;
+                case DebugInfoType.eBottomMap:
+                    stringBuilder.Append("\nBottomArray\n");
+                    _AppendArrayInfo(BottomArray, stringBuilder);
+                    break;
+                case DebugInfoType.eOutList:
+                    stringBuilder.Append("\nOutList\n");
+                    _AppendListInfo(OutList, stringBuilder);
                     break;
                 case DebugInfoType.eAll:
                     break;
