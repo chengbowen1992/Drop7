@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.Assertions;
 using Random = System.Random;
 
-namespace Lesson1 
+namespace Lesson2
 {
     public sealed class DropNodeManager
     {
@@ -16,21 +16,44 @@ namespace Lesson1
         public static readonly int MAX_NUM = 7;        //Included
 
         public int[,] OriginData = new int[HEIGHT, WIDTH];   //原始数据
-        public int[,] HorizonMap = new int[HEIGHT, WIDTH];  //行 统计
-        public int[,] VerticalMap = new int[HEIGHT, WIDTH]; //列 统计
-        public int[,] BombMap = new int[HEIGHT, WIDTH];     //爆炸 统计
-        public int[,] MoveMap = new int[HEIGHT, WIDTH];     //移动 统计
+        public int[,] HorizonMap = new int[HEIGHT, WIDTH];   //行 统计
+        public int[,] VerticalMap = new int[HEIGHT, WIDTH];  //列 统计
+        public int[,] BombMap = new int[HEIGHT, WIDTH];      //爆炸 统计
+        public int[,] MoveMap = new int[HEIGHT, WIDTH];      //移动 统计
 
         private int[,] BottomArray = new int[HEIGHT,WIDTH];        //底部 填充
         private int BottomHeight = 0;
 
-        public List<DropNode> BombList = new List<DropNode>();  //爆炸列表
-        public List<DropNode> BombedList = new List<DropNode>(); //爆炸波及列表
-        public List<DropNode> OutList = new List<DropNode>();    //超出区域列表
+        public DropNode NewNode;    //掉落节点
+        public List<DropNode> MoveList = new List<DropNode>();    //移动列表
+        public List<DropNode> BombList = new List<DropNode>();    //爆炸列表
+        public List<DropNode> BombedList = new List<DropNode>();  //爆炸波及列表
+        public List<DropNode> OutList = new List<DropNode>();     //超出区域列表
         
         public Random randomMgr;
 
         #region  执行操作
+        //流程
+        //--1.初始化
+        
+        //--2.掉落 新节点
+        //---->新节点
+        
+        //--3.计算 爆炸节点
+        //---->爆炸点列表
+        
+        //--4.爆炸节点
+        //---->波及节点列表
+        //------>解锁节点
+        //------>移动节点
+        //------>//无变化节点
+
+        //--5.爆炸附近节点 重新掉落
+        //-- 循环 3-5 至没有新的爆炸节点为止
+        
+        //--6.添加新的一行
+        //--7.循环 3-5 至没有新的爆炸点为止
+        
         /// <summary>
         /// 加载初始信息
         /// </summary>
