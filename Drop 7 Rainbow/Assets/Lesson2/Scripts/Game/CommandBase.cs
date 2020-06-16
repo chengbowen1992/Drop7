@@ -61,6 +61,22 @@ namespace Lesson2
     }
 
     /// <summary>
+    /// 产生 掉落物 命令
+    /// </summary>
+    public class CreateDropCommand : CommandBase
+    {
+        public override void Excute()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public override void Undo()
+        {
+            throw new System.NotImplementedException();
+        }
+    }
+
+    /// <summary>
     /// 掉落命令
     /// </summary>
     public class DropCommand : CommandBase

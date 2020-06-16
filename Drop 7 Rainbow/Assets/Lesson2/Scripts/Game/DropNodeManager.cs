@@ -14,45 +14,47 @@ namespace Lesson2
     {
         public static readonly int WIDTH = 7;
         public static readonly int HEIGHT = 8;
-        public static readonly int MAX_NUM = 7;        //Included
+        public static readonly int MAX_NUM = 7; //Included
         public static readonly int CENTER_Y = 3;
         public static readonly int CENTER_X = 3;
         public static readonly int CELL_SIZE = 100;
-        
-        public int[,] OriginData = new int[HEIGHT, WIDTH];   //原始数据
-        public int[,] HorizonMap = new int[HEIGHT, WIDTH];   //行 统计
-        public int[,] VerticalMap = new int[HEIGHT, WIDTH];  //列 统计
-        public int[,] BombMap = new int[HEIGHT, WIDTH];      //爆炸 统计
-        public int[,] MoveMap = new int[HEIGHT, WIDTH];      //移动 统计
 
-        private int[,] BottomArray = new int[HEIGHT,WIDTH];        //底部 填充
+        public int[,] OriginData = new int[HEIGHT, WIDTH]; //原始数据
+        public int[,] HorizonMap = new int[HEIGHT, WIDTH]; //行 统计
+        public int[,] VerticalMap = new int[HEIGHT, WIDTH]; //列 统计
+        public int[,] BombMap = new int[HEIGHT, WIDTH]; //爆炸 统计
+        public int[,] MoveMap = new int[HEIGHT, WIDTH]; //移动 统计
+
+        private int[,] BottomArray = new int[HEIGHT, WIDTH]; //底部 填充
         private int BottomHeight = 0;
 
-        public readonly Dictionary<Vector2Int, DropItem> DropDictionary = new Dictionary<Vector2Int, DropItem>(WIDTH * HEIGHT);    //统计字典
+        public readonly Dictionary<Vector2Int, DropItem> DropDictionary = new Dictionary<Vector2Int, DropItem>(WIDTH * HEIGHT); //统计字典
+
+        public DropItem NewNode; //掉落节点
         
-        public DropNode NewNode;    //掉落节点
-        public List<DropNode> MoveList = new List<DropNode>();    //移动列表
-        public List<DropNode> BombList = new List<DropNode>();    //爆炸列表
-        public List<DropNode> BombedList = new List<DropNode>();  //爆炸波及列表
-        public List<DropNode> OutList = new List<DropNode>();     //超出区域列表
+        public List<DropNode> MoveList = new List<DropNode>(); //移动列表
+        public List<DropNode> BombList = new List<DropNode>(); //爆炸列表
+        public List<DropNode> BombedList = new List<DropNode>(); //爆炸波及列表
+        public List<DropNode> OutList = new List<DropNode>(); //超出区域列表
 
         public Transform DropRoot;
         public DropItem DropItemOne;
-        
+
         public Random randomMgr;
 
         public Queue<CommandBase> CmdQueue = new Queue<CommandBase>(WIDTH * HEIGHT);
-        
-        #region  执行操作
+
+        #region 执行操作
+
         //流程
         //--1.初始化
-        
+
         //--2.掉落 新节点
         //---->新节点
-        
+
         //--3.计算 爆炸节点
         //---->爆炸点列表
-        
+
         //--4.爆炸节点
         //---->波及节点列表
         //------>解锁节点
@@ -61,10 +63,10 @@ namespace Lesson2
 
         //--5.爆炸附近节点 重新掉落
         //-- 循环 3-5 至没有新的爆炸节点为止
-        
+
         //--6.添加新的一行
         //--7.循环 3-5 至没有新的爆炸点为止
-        
+
         /// <summary>
         /// 加载初始信息
         /// </summary>
@@ -78,7 +80,7 @@ namespace Lesson2
             BombList.Clear();
             BombedList.Clear();
             OutList.Clear();
-            
+
             OriginData = data;
             BottomHeight = 0;
 
@@ -97,31 +99,8 @@ namespace Lesson2
 
             //初始化 行 计数信息
             UpdateHorizonAll();
-
-            for (int i = 0; i < HEIGHT; i++)
-            {
-                for (int j = 0; j < WIDTH; j++)
-                {
-                    var val = OriginData[i, j];
-                    if (val != 0)
-                    {
-                        var createCmd = new CreateCommand(){DropMgr = this, Pos = new Vector2Int(j, i), CreateType = CreateItemType.eLoad, Val = val};
-                        CmdQueue.Enqueue(createCmd);
-                        var posCmd = new SetPositionCommand() {DropMgr = this, Position = new Vector3(0, 10000, 0), TargetIndex = new Vector2Int(j, i)};
-                        CmdQueue.Enqueue(posCmd);
-
-                        var beginPos = DropItem.GetPositionByIndex(new Vector2Int(j, HEIGHT));
-                        var endPos = DropItem.GetPositionByIndex(new Vector2Int(j, i));
-
-                        var moveCmd = new MoveCommand()
-                        {
-                            DropMgr = this, TargetIndex = new Vector2Int(j, i), BeginPos = beginPos, EndPos = endPos,
-                            MoveTime = 1f, DelayTime = i * 0.5f
-                        };
-                        CmdQueue.Enqueue(moveCmd);
-                    }
-                }
-            }
+            
+            CreateLoadCommands();
         }
 
         /// <summary>
@@ -168,11 +147,11 @@ namespace Lesson2
             UpdateHorizonByRow(y);
 
             int bombAll = 0;
-            
+
             do
             {
                 bombAll = UpdateBombAll(); //可以优化
-                
+
                 if (bombAll > 0)
                 {
                     int bombCount, showCount;
@@ -287,9 +266,9 @@ namespace Lesson2
         /// <returns>是否游戏可以继续</returns>
         public bool AddBottomLine(int lineHeight)
         {
-            if(lineHeight <= 0)
+            if (lineHeight <= 0)
                 return true;
-            
+
             //为了便于测试，置于前方
             ClearMap();
 
@@ -318,14 +297,14 @@ namespace Lesson2
             {
                 for (int j = 0; j < WIDTH; j++)
                 {
-                    var randVal = -2/*randomMgr.Next(0, 10000) % 2 == 0 ? GetRandomNodeNum() : randomMgr.Next(-2, 0)*/;
+                    var randVal = -2 /*randomMgr.Next(0, 10000) % 2 == 0 ? GetRandomNodeNum() : randomMgr.Next(-2, 0)*/;
                     BottomArray[i, j] = randVal;
                     OriginData[i, j] = BottomArray[i, j];
                 }
             }
-            
+
             UpdateAddBottom();
-            
+
             return OutList.Count == 0;
         }
 
@@ -354,6 +333,7 @@ namespace Lesson2
                     BombMap[i, j] = MoveMap[i, j] = BottomArray[i, j] = 0;
                 }
             }
+
             OutList.Clear();
             BombList.Clear();
             BombedList.Clear();
@@ -365,7 +345,7 @@ namespace Lesson2
             return randomMgr.Next(1, MAX_NUM + 1);
 
         }
-        
+
         public DropNode CreateNode(Vector2Int pos, int val)
         {
             var node = new DropNode(pos, val);
@@ -394,7 +374,49 @@ namespace Lesson2
 
         #endregion
 
-#region 处理表现
+        #region 处理命令
+        /// <summary>
+        /// 处理加载初始元素
+        /// </summary>
+        private void CreateLoadCommands()
+        {
+            for (int i = 0; i < HEIGHT; i++)
+            {
+                for (int j = 0; j < WIDTH; j++)
+                {
+                    var val = OriginData[i, j];
+                    if (val != 0)
+                    {
+                        //创建
+                        var createCmd = new CreateCommand(){DropMgr = this, Pos = new Vector2Int(j, i), CreateType = CreateItemType.eLoad, Val = val};
+                        CmdQueue.Enqueue(createCmd);
+                        
+                        //设置位置
+                        var posCmd = new SetPositionCommand(){DropMgr = this, Position = new Vector3(0, 10000, 0), TargetIndex = new Vector2Int(j, i)};
+                        CmdQueue.Enqueue(posCmd);
+
+                        var beginPos = DropItem.GetPositionByIndex(new Vector2Int(j, HEIGHT));
+                        var endPos = DropItem.GetPositionByIndex(new Vector2Int(j, i));
+
+                        //移动到初始位置
+                        var moveCmd = new MoveCommand()
+                        {
+                            DropMgr = this, TargetIndex = new Vector2Int(j, i), BeginPos = beginPos, EndPos = endPos,
+                            MoveTime = 1f, DelayTime = i * 0.5f
+                        };
+                        CmdQueue.Enqueue(moveCmd);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 产生掉落元素
+        /// </summary>
+        private void CreateNewItemCommands()
+        {
+            
+        }
 
         public void CreateItem(CreateCommand cmd)
         {
@@ -422,18 +444,19 @@ namespace Lesson2
             {
                 var lastIndex = target.DropData.Position;
                 var newIndex = cmd.EndIndex.Value;
-                
+
                 DropDictionary.Remove(lastIndex);
                 target.DropData.UpdatePosition(newIndex);
                 DropDictionary.Add(newIndex, target);
             }
-            
+
             target.ExcuteMove(cmd);
         }
 
         #endregion
-        
+
         #region 更新 数据信息
+
         /// <summary>
         /// 更新所有 行 统计信息
         /// </summary>
@@ -602,8 +625,9 @@ namespace Lesson2
 
         #endregion
 
-        #region  测试
-        public enum DebugInfoType 
+        #region 测试
+
+        public enum DebugInfoType
         {
             eOriginMap = 0,
             eHorizonMap,
@@ -614,7 +638,7 @@ namespace Lesson2
             eBombedList,
             eBottomMap,
             eOutList,
-            
+
             //Do not change
             eAll
         }
@@ -640,7 +664,8 @@ namespace Lesson2
             {
                 foreach (var item in list)
                 {
-                    strBuilder.Append($"[{item.Position.x} , {item.Position.y}] = {string.Format("{0,4}", item.Value)} ,");
+                    strBuilder.Append(
+                        $"[{item.Position.x} , {item.Position.y}] = {string.Format("{0,4}", item.Value)} ,");
                 }
 
                 strBuilder.Append("\n");
@@ -694,6 +719,7 @@ namespace Lesson2
 
             return stringBuilder.ToString();
         }
+
         #endregion
     }
 }
