@@ -7,7 +7,8 @@ namespace Lesson2
     public abstract class CommandBase
     {
         public DropNodeManager DropMgr;
-        public DropNode Target;
+        public DropItem Target;
+        public Vector2Int TargetIndex;
         
         public abstract void Excute();
         public abstract void Undo();
@@ -31,13 +32,7 @@ namespace Lesson2
         
         public override void Excute()
         {
-            if (CreateType == CreateItemType.eLoad)
-            {
-                var node = DropMgr.CreateNode(Pos, Val);
-                var item = DropMgr.CreateItem(node);
-
-                DropMgr.DropDictionary.Add(Pos, item);
-            }
+            DropMgr.CreateItem(this);
         }
 
         public override void Undo()
@@ -45,7 +40,26 @@ namespace Lesson2
             //TODO
         }
     }
-    
+
+    /// <summary>
+    /// 移动命令
+    /// 直接移动到位置
+    /// </summary>
+    public class SetPositionCommand : CommandBase
+    {
+        public Vector3 Position;
+        
+        public override void Excute()
+        {
+            DropMgr.SetItemPos(this);
+        }
+
+        public override void Undo()
+        {
+            throw new System.NotImplementedException();
+        }
+    }
+
     /// <summary>
     /// 掉落命令
     /// </summary>
@@ -67,9 +81,19 @@ namespace Lesson2
     /// </summary>
     public class MoveCommand : CommandBase
     {
+        public Vector3 BeginPos;
+        public Vector3 EndPos;
+        
+        public Vector2Int? EndIndex;
+        
+        public AnimationCurve MoveCurve;
+
+        public float DelayTime;
+        public float MoveTime;
+        
         public override void Excute()
         {
-            throw new System.NotImplementedException();
+            DropMgr.MoveItem(this);
         }
 
         public override void Undo()

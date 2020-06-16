@@ -105,8 +105,20 @@ namespace Lesson2
                     var val = OriginData[i, j];
                     if (val != 0)
                     {
-                        var cmd = new CreateCommand(){DropMgr = this, Pos = new Vector2Int(j, i), CreateType = CreateItemType.eLoad, Val = val};
-                        CmdQueue.Enqueue(cmd);
+                        var createCmd = new CreateCommand(){DropMgr = this, Pos = new Vector2Int(j, i), CreateType = CreateItemType.eLoad, Val = val};
+                        CmdQueue.Enqueue(createCmd);
+                        var posCmd = new SetPositionCommand() {DropMgr = this, Position = new Vector3(0, 10000, 0), TargetIndex = new Vector2Int(j, i)};
+                        CmdQueue.Enqueue(posCmd);
+
+                        var beginPos = DropItem.GetPositionByIndex(new Vector2Int(j, HEIGHT));
+                        var endPos = DropItem.GetPositionByIndex(new Vector2Int(j, i));
+
+                        var moveCmd = new MoveCommand()
+                        {
+                            DropMgr = this, TargetIndex = new Vector2Int(j, i), BeginPos = beginPos, EndPos = endPos,
+                            MoveTime = 1f, DelayTime = i * 0.5f
+                        };
+                        CmdQueue.Enqueue(moveCmd);
                     }
                 }
             }
@@ -371,18 +383,56 @@ namespace Lesson2
             return item;
         }
 
-        public IEnumerator ExcuteCommands()
+        public void ExcuteCommands()
         {
             while (CmdQueue.Count > 0)
             {
                 var cmd = CmdQueue.Dequeue();
                 cmd.Excute();
-                yield return new WaitForSeconds(0.1f);
             }
         }
 
         #endregion
 
+#region 处理表现
+
+        public void CreateItem(CreateCommand cmd)
+        {
+            if (cmd.CreateType == CreateItemType.eLoad)
+            {
+                var node = CreateNode(cmd.Pos, cmd.Val);
+                var item = CreateItem(node);
+
+                DropDictionary.Add(cmd.Pos, item);
+            }
+        }
+
+        public void SetItemPos(SetPositionCommand cmd)
+        {
+            var target = cmd.Target ? cmd.Target : DropDictionary[cmd.TargetIndex];
+
+            target.transform.localPosition = cmd.Position;
+        }
+
+        public void MoveItem(MoveCommand cmd)
+        {
+            var target = cmd.Target ? cmd.Target : DropDictionary[cmd.TargetIndex];
+
+            if (cmd.EndIndex.HasValue)
+            {
+                var lastIndex = target.DropData.Position;
+                var newIndex = cmd.EndIndex.Value;
+                
+                DropDictionary.Remove(lastIndex);
+                target.DropData.UpdatePosition(newIndex);
+                DropDictionary.Add(newIndex, target);
+            }
+            
+            target.ExcuteMove(cmd);
+        }
+
+        #endregion
+        
         #region 更新 数据信息
         /// <summary>
         /// 更新所有 行 统计信息

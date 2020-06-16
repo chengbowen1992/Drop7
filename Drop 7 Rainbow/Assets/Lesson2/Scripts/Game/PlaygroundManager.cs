@@ -20,7 +20,7 @@ namespace Lesson2
 
         public void ExcuteCommands()
         {
-            StartCoroutine(dropManager.ExcuteCommands());
+            dropManager.ExcuteCommands();
         }
     }
 }
