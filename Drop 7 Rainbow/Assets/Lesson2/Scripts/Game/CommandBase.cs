@@ -6,25 +6,43 @@ namespace Lesson2
 {
     public abstract class CommandBase
     {
+        public DropNodeManager DropMgr;
         public DropNode Target;
         
         public abstract void Excute();
         public abstract void Undo();
     }
 
+    public enum CreateItemType
+    {
+        eLoad,
+        eDrop,
+        eBottom,
+    }
+    
     /// <summary>
     /// 创建命令
     /// </summary>
     public class CreateCommand : CommandBase
     {
+        public CreateItemType CreateType;
+        public Vector2Int Pos;
+        public int Val;
+        
         public override void Excute()
         {
-            throw new System.NotImplementedException();
+            if (CreateType == CreateItemType.eLoad)
+            {
+                var node = DropMgr.CreateNode(Pos, Val);
+                var item = DropMgr.CreateItem(node);
+
+                DropMgr.DropDictionary.Add(Pos, item);
+            }
         }
 
         public override void Undo()
         {
-            throw new System.NotImplementedException();
+            //TODO
         }
     }
     

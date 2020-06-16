@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.Assertions;
 using Random = System.Random;
@@ -14,7 +15,10 @@ namespace Lesson2
         public static readonly int WIDTH = 7;
         public static readonly int HEIGHT = 8;
         public static readonly int MAX_NUM = 7;        //Included
-
+        public static readonly int CENTER_Y = 3;
+        public static readonly int CENTER_X = 3;
+        public static readonly int CELL_SIZE = 100;
+        
         public int[,] OriginData = new int[HEIGHT, WIDTH];   //原始数据
         public int[,] HorizonMap = new int[HEIGHT, WIDTH];   //行 统计
         public int[,] VerticalMap = new int[HEIGHT, WIDTH];  //列 统计
@@ -24,14 +28,21 @@ namespace Lesson2
         private int[,] BottomArray = new int[HEIGHT,WIDTH];        //底部 填充
         private int BottomHeight = 0;
 
+        public readonly Dictionary<Vector2Int, DropItem> DropDictionary = new Dictionary<Vector2Int, DropItem>(WIDTH * HEIGHT);    //统计字典
+        
         public DropNode NewNode;    //掉落节点
         public List<DropNode> MoveList = new List<DropNode>();    //移动列表
         public List<DropNode> BombList = new List<DropNode>();    //爆炸列表
         public List<DropNode> BombedList = new List<DropNode>();  //爆炸波及列表
         public List<DropNode> OutList = new List<DropNode>();     //超出区域列表
+
+        public Transform DropRoot;
+        public DropItem DropItemOne;
         
         public Random randomMgr;
 
+        public Queue<CommandBase> CmdQueue = new Queue<CommandBase>(WIDTH * HEIGHT);
+        
         #region  执行操作
         //流程
         //--1.初始化
@@ -86,6 +97,19 @@ namespace Lesson2
 
             //初始化 行 计数信息
             UpdateHorizonAll();
+
+            for (int i = 0; i < HEIGHT; i++)
+            {
+                for (int j = 0; j < WIDTH; j++)
+                {
+                    var val = OriginData[i, j];
+                    if (val != 0)
+                    {
+                        var cmd = new CreateCommand(){DropMgr = this, Pos = new Vector2Int(j, i), CreateType = CreateItemType.eLoad, Val = val};
+                        CmdQueue.Enqueue(cmd);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -330,13 +354,31 @@ namespace Lesson2
 
         }
         
-        private DropNode CreateNode(Vector2Int pos, int val)
+        public DropNode CreateNode(Vector2Int pos, int val)
         {
             var node = new DropNode(pos, val);
 #if UNITY_EDITOR
             Debug.Log($"CreateNode == {node.ToString()}");
 #endif
             return node;
+        }
+
+        public DropItem CreateItem(DropNode node)
+        {
+            var item = GameObject.Instantiate(DropItemOne, DropRoot, true) as DropItem;
+            item.gameObject.SetActive(true);
+            item.SetData(node);
+            return item;
+        }
+
+        public IEnumerator ExcuteCommands()
+        {
+            while (CmdQueue.Count > 0)
+            {
+                var cmd = CmdQueue.Dequeue();
+                cmd.Excute();
+                yield return new WaitForSeconds(0.1f);
+            }
         }
 
         #endregion

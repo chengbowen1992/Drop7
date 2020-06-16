@@ -18,12 +18,6 @@ namespace Lesson2
         };
 
         public PlaygroundManager PlaygroundMgr;
-        
-        private DropNodeManager dropNodeManager;
-
-        private string mapBefore, mapAfter, dropInfo;
-
-        private GUIStyle fontStyle;
 
         private bool IfFinish;
 
@@ -31,20 +25,16 @@ namespace Lesson2
         
         void Start()
         {
-            fontStyle = new GUIStyle();
-            fontStyle.fontSize = 30;
             IfFinish = false;
             clickTimes = 0;
-            dropNodeManager = new DropNodeManager();
-            dropNodeManager.LoadData(testArray);
-            mapBefore = dropInfo = "";
-            mapAfter = dropNodeManager.GetDebugInfo(DropNodeManager.DebugInfoType.eOriginMap);
 
-            ShowDebugInfo();
+            PlaygroundMgr.LoadData(testArray);
+            PlaygroundMgr.ExcuteCommands();
         }
 
         void Update()
         {
+            /*
             if (IfFinish)
             {
                 return;
@@ -52,8 +42,6 @@ namespace Lesson2
 
             if (Input.GetMouseButtonDown(0))
             {
-                mapBefore = dropNodeManager.GetDebugInfo(DropNodeManager.DebugInfoType.eOriginMap);
-
                 if (clickTimes % 10 == 9)
                 {
                     var lineHeight = 1; //clickTimes / 10 + 1;
@@ -66,8 +54,6 @@ namespace Lesson2
                     int randomNum = Random.Range(-2, DropNodeManager.WIDTH);
                     if (randomNum != 0)
                     {
-                        dropInfo = $"x=> {randomX}  val=>{randomNum}";
-
                         IfFinish = !dropNodeManager.CanDropNode(randomX);
                         if (!IfFinish)
                         {
@@ -81,20 +67,9 @@ namespace Lesson2
                     }   
                 }
 
-                mapAfter = dropNodeManager.GetDebugInfo(DropNodeManager.DebugInfoType.eOriginMap);
-                ShowDebugInfo();
-                
                 clickTimes++;
             }
-        }
-
-        void ShowDebugInfo() 
-        {
-            var debugCount = (int)DropNodeManager.DebugInfoType.eAll;
-            for (int i = 0; i < debugCount; i++)
-            {
-                Debug.Log(dropNodeManager.GetDebugInfo((DropNodeManager.DebugInfoType)i));
-            }
+            */
         }
     }
 }
