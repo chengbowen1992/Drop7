@@ -30,7 +30,7 @@ namespace Lesson2
 
             PlaygroundMgr.LoadData(testArray);
             PlaygroundMgr.CreateNewDrop(0.3f, 1.5f);
-            PlaygroundMgr.ExcuteCommands();
+            PlaygroundMgr.ExecuteCommands();
         }
 
         void Update()

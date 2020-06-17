@@ -105,7 +105,10 @@ namespace Lesson2
             CreateLoadCommands();
         }
 
-        public void CreateDropItem(float excuteTime ,float delayTime)
+        /// <summary>
+        /// 产生掉落元素 
+        /// </summary>
+        public void CreateDropItem(float executeTime ,float delayTime)
         {
             int randomNum = 0;
             while (randomNum == 0)
@@ -113,7 +116,7 @@ namespace Lesson2
                 randomNum = randomMgr.Next(-2, DropNodeManager.WIDTH);
             }
 
-            CreateNewItemCommands(randomNum, excuteTime, delayTime);
+            CreateNewItemCommands(randomNum, executeTime, delayTime);
         }
 
         /// <summary>
@@ -376,20 +379,21 @@ namespace Lesson2
             return item;
         }
 
-        public void ExcuteCommands()
+        public void ExecuteCommands()
         {
             while (CmdQueue.Count > 0)
             {
                 var cmd = CmdQueue.Dequeue();
-                cmd.Excute();
+                cmd.Execute();
             }
         }
 
         #endregion
 
-        #region 处理命令
+        #region 生成命令
+        
         /// <summary>
-        /// 处理加载初始元素
+        /// 生成 所有 元素
         /// </summary>
         private void CreateLoadCommands()
         {
@@ -403,7 +407,7 @@ namespace Lesson2
                         //创建
                         var createCmd = new CreateCommand(){DropMgr = this, Index = new Vector2Int(j, i),Position = new Vector3(0, 10000, 0) , CreateType = CreateItemType.eLoad, Val = val};
                         CmdQueue.Enqueue(createCmd);
-                        
+                                
                         var beginPos = DropItem.GetPositionByIndex(new Vector2Int(j, HEIGHT));
                         var endPos = DropItem.GetPositionByIndex(new Vector2Int(j, i));
 
@@ -411,7 +415,7 @@ namespace Lesson2
                         var moveCmd = new MoveCommand()
                         {
                             DropMgr = this, TargetIndex = new Vector2Int(j, i), BeginPos = beginPos, EndPos = endPos,
-                            ExcuteTime = 0.6f, DelayTime = i * 0.5f + j * 0.03f
+                            ExecuteTime = 0.6f, DelayTime = i * 0.5f + j * 0.03f
                         };
                         CmdQueue.Enqueue(moveCmd);
                     }
@@ -420,14 +424,21 @@ namespace Lesson2
         }
 
         /// <summary>
-        /// 产生掉落元素
+        /// 生成 掉落元素
         /// </summary>
-        private void CreateNewItemCommands(int randomNum,float excuteTime,float delayTime)
+        private void CreateNewItemCommands(int randomNum, float executeTime, float delayTime)
         {
-            var newItemCmd = new CreateCommand() {CreateType = CreateItemType.eDrop, DropMgr = this, Position = new Vector3(0, HEIGHT * CELL_SIZE * 0.5f, 0),Index = new Vector2Int(-1,-1),Val = randomNum,ExcuteTime = excuteTime,DelayTime = delayTime};
+            var newItemCmd = new CreateCommand() {CreateType = CreateItemType.eDrop, DropMgr = this, Position = new Vector3(0, HEIGHT * CELL_SIZE * 0.5f, 0),Index = new Vector2Int(-1,-1),Val = randomNum,ExecuteTime = executeTime,DelayTime = delayTime};
             CmdQueue.Enqueue(newItemCmd);
         }
+        
+        #endregion
+        
+        #region 处理命令
 
+        /// <summary>
+        /// 创建 元素节点
+        /// </summary>
         public void CreateItem(CreateCommand cmd)
         {
             var node = CreateNode(cmd.Index, cmd.Val);
@@ -459,10 +470,13 @@ namespace Lesson2
                     item.transform.localPosition = cmd.Position.Value;
                 }
                 
-                item.ExcuteCreateDrop(cmd);
+                item.ExecuteCreateDrop(cmd);
             }
         }
 
+        /// <summary>
+        /// 强制设置节点位置
+        /// </summary>
         public void SetItemPos(SetPositionCommand cmd)
         {
             var target = cmd.Target ? cmd.Target : DropDictionary[cmd.TargetIndex];
@@ -470,6 +484,9 @@ namespace Lesson2
             target.transform.localPosition = cmd.Position;
         }
 
+        /// <summary>
+        /// 移动节点到
+        /// </summary>
         public void MoveItem(MoveCommand cmd)
         {
             var target = cmd.Target ? cmd.Target : DropDictionary[cmd.TargetIndex];
@@ -484,9 +501,10 @@ namespace Lesson2
                 DropDictionary.Add(newIndex, target);
             }
 
-            target.ExcuteMove(cmd);
+            target.ExecuteMove(cmd);
         }
 
+        
         #endregion
 
         #region 更新 数据信息

@@ -11,6 +11,7 @@ namespace Lesson2
         public enum DropItemState
         {
             eNone,
+            eCreate,
             eMove,
             eBomb,
             eBombed
@@ -51,7 +52,9 @@ namespace Lesson2
             }
         }
 
-        public void ExcuteMove(MoveCommand cmd)
+        #region 执行操作
+
+        public void ExecuteMove(MoveCommand cmd)
         {
             if (moveCmd != null)
             {
@@ -62,19 +65,23 @@ namespace Lesson2
             StartCoroutine(PlayMove(cmd));
         }
 
-        public void ExcuteCreateDrop(CreateCommand cmd)
+        public void ExecuteCreateDrop(CreateCommand cmd)
         {
             StartCoroutine(PlayDropCreate(cmd));
         }
+        #endregion
+
+        #region 具体操作
 
         private IEnumerator PlayMove(MoveCommand cmd)
         {
+            ChangeStateTo(DropItemState.eMove);
             moveCmd = cmd;
             
             yield return new WaitForSeconds(moveCmd.DelayTime);
 
             var timeCounter = 0f;
-            var totalTime = moveCmd.ExcuteTime;
+            var totalTime = moveCmd.ExecuteTime;
             var beginPos = moveCmd.BeginPos;
             var endPos = moveCmd.EndPos;
             
@@ -97,16 +104,19 @@ namespace Lesson2
 
             transform.localPosition = endPos;
             moveCmd = null;
+            
+            ChangeStateTo(DropItemState.eNone);
         }
 
         private IEnumerator PlayDropCreate(CreateCommand cmd)
         {
+            ChangeStateTo(DropItemState.eCreate);
             transform.localScale = Vector3.zero;
 
             yield return new WaitForSeconds(cmd.DelayTime);
             
             var timeCounter = 0f;
-            var totalTime = cmd.ExcuteTime;
+            var totalTime = cmd.ExecuteTime;
 
             if (totalTime > 0)
             {
@@ -114,7 +124,7 @@ namespace Lesson2
                 {
                     var percent = timeCounter / totalTime;
                     var currentValX = DefaultScaleCurveX.Evaluate(percent);
-                    var currentValY = DefaultScaleCurveX.Evaluate(percent);
+                    var currentValY = DefaultScaleCurveY.Evaluate(percent);
 
                     transform.localScale = new Vector3(currentValX, currentValY, 1);
                     
@@ -124,6 +134,16 @@ namespace Lesson2
             }
 
             transform.localScale = Vector3.one;
+            ChangeStateTo(DropItemState.eNone);
+        }
+
+        #endregion
+
+        private void ChangeStateTo(DropItemState state)
+        {
+            //TODO Check and alert
+            
+            DropState = state;
         }
 
         public static Vector3 GetPositionByIndex(Vector2Int index)

@@ -11,21 +11,28 @@ namespace Lesson2
         public DropItem CopyOne;
     
         public DropNodeManager dropManager;
+        private DropItem NewItem => dropManager.NewItem;
         
+        /// <summary>
+        /// 加载关卡
+        /// </summary>
         public void LoadData(int[,] dataArray)
         {
             dropManager = new DropNodeManager {DropItemOne = CopyOne, DropRoot = DropRoot};
             dropManager.LoadData(dataArray);
         }
 
-        public void CreateNewDrop(float excuteTime = 1f,float delayTime = 0)
+        /// <summary>
+        /// 创建掉落物
+        /// </summary>
+        public void CreateNewDrop(float executeTime = 1f,float delayTime = 0)
         {
-            dropManager.CreateDropItem(excuteTime, delayTime);
+            dropManager.CreateDropItem(executeTime, delayTime);
         }
-
-        public void ExcuteCommands()
+        
+        public void ExecuteCommands()
         {
-            dropManager.ExcuteCommands();
+            dropManager.ExecuteCommands();
         }
     }
 }

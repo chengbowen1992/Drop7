@@ -9,10 +9,10 @@ namespace Lesson2
         public DropNodeManager DropMgr;
         public DropItem Target;
         public Vector2Int TargetIndex;
-        public float ExcuteTime;
+        public float ExecuteTime;
         public float DelayTime;
         
-        public abstract void Excute();
+        public abstract void Execute();
         public abstract void Undo();
     }
 
@@ -34,7 +34,7 @@ namespace Lesson2
 
         public int Val;
         
-        public override void Excute()
+        public override void Execute()
         {
             DropMgr.CreateItem(this);
         }
@@ -53,7 +53,7 @@ namespace Lesson2
     {
         public Vector3 Position;
         
-        public override void Excute()
+        public override void Execute()
         {
             DropMgr.SetItemPos(this);
         }
@@ -69,7 +69,7 @@ namespace Lesson2
     /// </summary>
     public class DropCommand : CommandBase
     {
-        public override void Excute()
+        public override void Execute()
         {
             throw new System.NotImplementedException();
         }
@@ -92,7 +92,7 @@ namespace Lesson2
         
         public AnimationCurve MoveCurve;
 
-        public override void Excute()
+        public override void Execute()
         {
             DropMgr.MoveItem(this);
         }
@@ -108,7 +108,7 @@ namespace Lesson2
     /// </summary>
     public class BombCommand : CommandBase
     {
-        public override void Excute()
+        public override void Execute()
         {
             throw new System.NotImplementedException();
         }
@@ -124,7 +124,7 @@ namespace Lesson2
     /// </summary>
     public class BombedCommand : CommandBase
     {
-        public override void Excute()
+        public override void Execute()
         {
             throw new System.NotImplementedException();
         }
