@@ -18,6 +18,11 @@ namespace Lesson2
             dropManager.LoadData(dataArray);
         }
 
+        public void CreateNewDrop(float excuteTime = 1f,float delayTime = 0)
+        {
+            dropManager.CreateDropItem(excuteTime, delayTime);
+        }
+
         public void ExcuteCommands()
         {
             dropManager.ExcuteCommands();

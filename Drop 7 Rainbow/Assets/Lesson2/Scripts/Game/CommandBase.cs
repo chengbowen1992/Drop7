@@ -9,6 +9,8 @@ namespace Lesson2
         public DropNodeManager DropMgr;
         public DropItem Target;
         public Vector2Int TargetIndex;
+        public float ExcuteTime;
+        public float DelayTime;
         
         public abstract void Excute();
         public abstract void Undo();
@@ -27,7 +29,9 @@ namespace Lesson2
     public class CreateCommand : CommandBase
     {
         public CreateItemType CreateType;
-        public Vector2Int Pos;
+        public Vector2Int Index;
+        public Vector3? Position;
+
         public int Val;
         
         public override void Excute()
@@ -52,22 +56,6 @@ namespace Lesson2
         public override void Excute()
         {
             DropMgr.SetItemPos(this);
-        }
-
-        public override void Undo()
-        {
-            throw new System.NotImplementedException();
-        }
-    }
-
-    /// <summary>
-    /// 产生 掉落物 命令
-    /// </summary>
-    public class CreateDropCommand : CommandBase
-    {
-        public override void Excute()
-        {
-            throw new System.NotImplementedException();
         }
 
         public override void Undo()
@@ -104,9 +92,6 @@ namespace Lesson2
         
         public AnimationCurve MoveCurve;
 
-        public float DelayTime;
-        public float MoveTime;
-        
         public override void Excute()
         {
             DropMgr.MoveItem(this);

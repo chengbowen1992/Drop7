@@ -6,6 +6,8 @@ using System.Text;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Assertions;
+using Debug = UnityEngine.Debug;
+using Object = UnityEngine.Object;
 using Random = System.Random;
 
 namespace Lesson2
@@ -30,7 +32,7 @@ namespace Lesson2
 
         public readonly Dictionary<Vector2Int, DropItem> DropDictionary = new Dictionary<Vector2Int, DropItem>(WIDTH * HEIGHT); //统计字典
 
-        public DropItem NewNode; //掉落节点
+        public DropItem NewItem; //掉落节点
         
         public List<DropNode> MoveList = new List<DropNode>(); //移动列表
         public List<DropNode> BombList = new List<DropNode>(); //爆炸列表
@@ -101,6 +103,17 @@ namespace Lesson2
             UpdateHorizonAll();
             
             CreateLoadCommands();
+        }
+
+        public void CreateDropItem(float excuteTime ,float delayTime)
+        {
+            int randomNum = 0;
+            while (randomNum == 0)
+            {
+                randomNum = randomMgr.Next(-2, DropNodeManager.WIDTH);
+            }
+
+            CreateNewItemCommands(randomNum, excuteTime, delayTime);
         }
 
         /// <summary>
@@ -357,7 +370,7 @@ namespace Lesson2
 
         public DropItem CreateItem(DropNode node)
         {
-            var item = GameObject.Instantiate(DropItemOne, DropRoot, true) as DropItem;
+            var item = Object.Instantiate(DropItemOne, DropRoot, true) as DropItem;
             item.gameObject.SetActive(true);
             item.SetData(node);
             return item;
@@ -388,13 +401,9 @@ namespace Lesson2
                     if (val != 0)
                     {
                         //创建
-                        var createCmd = new CreateCommand(){DropMgr = this, Pos = new Vector2Int(j, i), CreateType = CreateItemType.eLoad, Val = val};
+                        var createCmd = new CreateCommand(){DropMgr = this, Index = new Vector2Int(j, i),Position = new Vector3(0, 10000, 0) , CreateType = CreateItemType.eLoad, Val = val};
                         CmdQueue.Enqueue(createCmd);
                         
-                        //设置位置
-                        var posCmd = new SetPositionCommand(){DropMgr = this, Position = new Vector3(0, 10000, 0), TargetIndex = new Vector2Int(j, i)};
-                        CmdQueue.Enqueue(posCmd);
-
                         var beginPos = DropItem.GetPositionByIndex(new Vector2Int(j, HEIGHT));
                         var endPos = DropItem.GetPositionByIndex(new Vector2Int(j, i));
 
@@ -402,7 +411,7 @@ namespace Lesson2
                         var moveCmd = new MoveCommand()
                         {
                             DropMgr = this, TargetIndex = new Vector2Int(j, i), BeginPos = beginPos, EndPos = endPos,
-                            MoveTime = 1f, DelayTime = i * 0.5f
+                            ExcuteTime = 0.6f, DelayTime = i * 0.5f + j * 0.03f
                         };
                         CmdQueue.Enqueue(moveCmd);
                     }
@@ -413,19 +422,44 @@ namespace Lesson2
         /// <summary>
         /// 产生掉落元素
         /// </summary>
-        private void CreateNewItemCommands()
+        private void CreateNewItemCommands(int randomNum,float excuteTime,float delayTime)
         {
-            
+            var newItemCmd = new CreateCommand() {CreateType = CreateItemType.eDrop, DropMgr = this, Position = new Vector3(0, HEIGHT * CELL_SIZE * 0.5f, 0),Index = new Vector2Int(-1,-1),Val = randomNum,ExcuteTime = excuteTime,DelayTime = delayTime};
+            CmdQueue.Enqueue(newItemCmd);
         }
 
         public void CreateItem(CreateCommand cmd)
         {
+            var node = CreateNode(cmd.Index, cmd.Val);
+            var item = CreateItem(node);
+            
+            //正常加载
             if (cmd.CreateType == CreateItemType.eLoad)
             {
-                var node = CreateNode(cmd.Pos, cmd.Val);
-                var item = CreateItem(node);
+                if (cmd.Position.HasValue)
+                {
+                    item.transform.localPosition = cmd.Position.Value;
+                }
 
-                DropDictionary.Add(cmd.Pos, item);
+                DropDictionary.Add(cmd.Index, item);
+            }
+            //掉落
+            else if (cmd.CreateType == CreateItemType.eDrop)
+            {
+                if (NewItem != null)
+                {
+                    Debug.LogError("上一个掉落物未销毁！");
+                    Object.Destroy(NewItem.gameObject);
+                }
+
+                NewItem = item;
+                
+                if (cmd.Position.HasValue)
+                {
+                    item.transform.localPosition = cmd.Position.Value;
+                }
+                
+                item.ExcuteCreateDrop(cmd);
             }
         }
 

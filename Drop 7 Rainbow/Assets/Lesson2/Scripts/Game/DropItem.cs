@@ -20,6 +20,9 @@ namespace Lesson2
     
         public DropNode DropData;
 
+        public AnimationCurve DefaultScaleCurveX;
+        public AnimationCurve DefaultScaleCurveY;
+        
         public AnimationCurve DefaultMoveCurve;
         
         public int LastVal = 0;
@@ -55,22 +58,23 @@ namespace Lesson2
                 Debug.LogError("MoveCommandNotFinish");
                 StopAllCoroutines();
             }
-
-            moveCmd = cmd;
-            StartCoroutine(PlayMove());
+            
+            StartCoroutine(PlayMove(cmd));
         }
 
-        public IEnumerator PlayMove()
+        public void ExcuteCreateDrop(CreateCommand cmd)
         {
-            if (moveCmd == null)
-            {
-                yield break;
-            }
+            StartCoroutine(PlayDropCreate(cmd));
+        }
+
+        private IEnumerator PlayMove(MoveCommand cmd)
+        {
+            moveCmd = cmd;
             
             yield return new WaitForSeconds(moveCmd.DelayTime);
 
             var timeCounter = 0f;
-            var totalTime = moveCmd.MoveTime;
+            var totalTime = moveCmd.ExcuteTime;
             var beginPos = moveCmd.BeginPos;
             var endPos = moveCmd.EndPos;
             
@@ -92,6 +96,34 @@ namespace Lesson2
             }
 
             transform.localPosition = endPos;
+            moveCmd = null;
+        }
+
+        private IEnumerator PlayDropCreate(CreateCommand cmd)
+        {
+            transform.localScale = Vector3.zero;
+
+            yield return new WaitForSeconds(cmd.DelayTime);
+            
+            var timeCounter = 0f;
+            var totalTime = cmd.ExcuteTime;
+
+            if (totalTime > 0)
+            {
+                while (timeCounter <= totalTime)
+                {
+                    var percent = timeCounter / totalTime;
+                    var currentValX = DefaultScaleCurveX.Evaluate(percent);
+                    var currentValY = DefaultScaleCurveX.Evaluate(percent);
+
+                    transform.localScale = new Vector3(currentValX, currentValY, 1);
+                    
+                    timeCounter += Time.deltaTime;
+                    yield return null;
+                }
+            }
+
+            transform.localScale = Vector3.one;
         }
 
         public static Vector3 GetPositionByIndex(Vector2Int index)

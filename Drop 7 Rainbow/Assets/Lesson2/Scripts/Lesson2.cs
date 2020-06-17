@@ -29,6 +29,7 @@ namespace Lesson2
             clickTimes = 0;
 
             PlaygroundMgr.LoadData(testArray);
+            PlaygroundMgr.CreateNewDrop(0.3f, 1.5f);
             PlaygroundMgr.ExcuteCommands();
         }
 
