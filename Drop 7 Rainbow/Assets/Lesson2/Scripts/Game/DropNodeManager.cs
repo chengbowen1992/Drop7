@@ -15,7 +15,7 @@ namespace Lesson2
     public sealed class DropNodeManager
     {
         public static readonly int WIDTH = 7;
-        public static readonly int HEIGHT = 8;
+        public static readonly int HEIGHT = 7;
         public static readonly int MAX_NUM = 7; //Included
         public static readonly int CENTER_Y = 3;
         public static readonly int CENTER_X = 3;
@@ -42,9 +42,8 @@ namespace Lesson2
         public Transform DropRoot;
         public DropItem DropItemOne;
 
-        public Random randomMgr;
-
-        public Queue<CommandBase> CmdQueue = new Queue<CommandBase>(WIDTH * HEIGHT);
+        private Random randomMgr;
+        private CommandManager cmdManager;
 
         #region 执行操作
 
@@ -79,6 +78,8 @@ namespace Lesson2
             Assert.IsTrue(data.GetLength(1) == WIDTH);
 
             randomMgr = new Random(DateTime.Now.Millisecond);
+            cmdManager = CommandManager.Instance;
+            
             BombList.Clear();
             BombedList.Clear();
             OutList.Clear();
@@ -117,6 +118,15 @@ namespace Lesson2
             }
 
             CreateNewItemCommands(randomNum, executeTime, delayTime);
+        }
+
+        public void DropDropItem(int index)
+        {
+            if (CanDropNode(index))
+            {
+                var targetIndex = TryDropNode(index, NewItem.DropData.Value);
+                DropDropItemCommand(targetIndex);
+            }
         }
 
         /// <summary>
@@ -379,13 +389,9 @@ namespace Lesson2
             return item;
         }
 
-        public void ExecuteCommands()
+        public void ExecuteCommands(Action<bool> onFinish)
         {
-            while (CmdQueue.Count > 0)
-            {
-                var cmd = CmdQueue.Dequeue();
-                cmd.Execute();
-            }
+            CommandManager.Instance.Execute(CommandManager.ExecuteMode.eAtOnce, (_, ifSuccess) => { onFinish?.Invoke(ifSuccess); });
         }
 
         #endregion
@@ -406,7 +412,7 @@ namespace Lesson2
                     {
                         //创建
                         var createCmd = new CreateCommand(){DropMgr = this, Index = new Vector2Int(j, i),Position = new Vector3(0, 10000, 0) , CreateType = CreateItemType.eLoad, Val = val};
-                        CmdQueue.Enqueue(createCmd);
+                        cmdManager.AppendCommand(createCmd);
                                 
                         var beginPos = DropItem.GetPositionByIndex(new Vector2Int(j, HEIGHT));
                         var endPos = DropItem.GetPositionByIndex(new Vector2Int(j, i));
@@ -417,7 +423,7 @@ namespace Lesson2
                             DropMgr = this, TargetIndex = new Vector2Int(j, i), BeginPos = beginPos, EndPos = endPos,
                             ExecuteTime = 0.6f, DelayTime = i * 0.5f + j * 0.03f
                         };
-                        CmdQueue.Enqueue(moveCmd);
+                        cmdManager.AppendCommand(moveCmd);
                     }
                 }
             }
@@ -428,10 +434,22 @@ namespace Lesson2
         /// </summary>
         private void CreateNewItemCommands(int randomNum, float executeTime, float delayTime)
         {
-            var newItemCmd = new CreateCommand() {CreateType = CreateItemType.eDrop, DropMgr = this, Position = new Vector3(0, HEIGHT * CELL_SIZE * 0.5f, 0),Index = new Vector2Int(-1,-1),Val = randomNum,ExecuteTime = executeTime,DelayTime = delayTime};
-            CmdQueue.Enqueue(newItemCmd);
+            var newItemCmd = new CreateCommand() {CreateType = CreateItemType.eDrop, DropMgr = this, Position = new Vector3(0, (HEIGHT + 1) * CELL_SIZE * 0.5f, 0),Index = new Vector2Int(-1,-1),Val = randomNum,ExecuteTime = executeTime,DelayTime = delayTime};
+            cmdManager.AppendCommand(newItemCmd);
         }
-        
+
+        private void DropDropItemCommand(Vector2Int targetIndex)
+        {
+            var beginPos = DropItem.GetPositionByIndex(new Vector2Int(targetIndex.x,HEIGHT));
+            var endPos = DropItem.GetPositionByIndex(targetIndex);
+            var moveCmd = new MoveCommand()
+            {
+                DropMgr = this, Target = NewItem, EndIndex = targetIndex, BeginPos = beginPos, EndPos = endPos, 
+                DelayTime = 0f, ExecuteTime = 0.1f
+            };
+            cmdManager.AppendCommand(moveCmd);
+        }
+
         #endregion
         
         #region 处理命令
@@ -453,6 +471,7 @@ namespace Lesson2
                 }
 
                 DropDictionary.Add(cmd.Index, item);
+                item.ExecuteCreate(cmd);
             }
             //掉落
             else if (cmd.CreateType == CreateItemType.eDrop)

@@ -14,7 +14,7 @@ namespace Lesson2
             {0, 0, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0},
             {0, 0, 0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, 0, 0},
+            // {0, 0, 0, 0, 0, 0, 0},
         };
 
         public PlaygroundManager PlaygroundMgr;
@@ -28,9 +28,13 @@ namespace Lesson2
             IfFinish = false;
             clickTimes = 0;
 
+            PlaygroundMgr.InitDetectArea();
             PlaygroundMgr.LoadData(testArray);
-            PlaygroundMgr.CreateNewDrop(0.3f, 1.5f);
-            PlaygroundMgr.ExecuteCommands();
+            PlaygroundMgr.ExecuteCommands(ifSuccess =>
+            {
+                PlaygroundMgr.CreateNewDrop(0.3f, 0);
+                PlaygroundMgr.ExecuteCommands(null);
+            });
         }
 
         void Update()

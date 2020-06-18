@@ -54,6 +54,11 @@ namespace Lesson2
 
         #region 执行操作
 
+        public void ExecuteCreate(CreateCommand cmd)
+        {
+            cmd.OnComplete(true);
+        }
+
         public void ExecuteMove(MoveCommand cmd)
         {
             if (moveCmd != null)
@@ -103,6 +108,7 @@ namespace Lesson2
             }
 
             transform.localPosition = endPos;
+            cmd.OnComplete(true);
             moveCmd = null;
             
             ChangeStateTo(DropItemState.eNone);
@@ -135,6 +141,8 @@ namespace Lesson2
 
             transform.localScale = Vector3.one;
             ChangeStateTo(DropItemState.eNone);
+            
+            cmd.OnComplete(true);
         }
 
         #endregion

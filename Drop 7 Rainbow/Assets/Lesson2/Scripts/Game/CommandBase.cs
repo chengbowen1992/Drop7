@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System;
 using UnityEngine;
 
 namespace Lesson2
@@ -11,9 +12,23 @@ namespace Lesson2
         public Vector2Int TargetIndex;
         public float ExecuteTime;
         public float DelayTime;
-        
-        public abstract void Execute();
+
+        private Action<CommandBase,bool> onComplete;
+
+        public void Execute(Action<CommandBase, bool> onFinish = null)
+        {
+            onComplete = onFinish;
+            OnExecute();
+        }
+
+        protected virtual void OnExecute(){ }
+
         public abstract void Undo();
+
+        public virtual void OnComplete(bool ifSuccess = true)
+        {
+            onComplete?.Invoke(this, ifSuccess);
+        }
     }
 
     public enum CreateItemType
@@ -34,7 +49,7 @@ namespace Lesson2
 
         public int Val;
         
-        public override void Execute()
+        protected override void OnExecute()
         {
             DropMgr.CreateItem(this);
         }
@@ -53,7 +68,7 @@ namespace Lesson2
     {
         public Vector3 Position;
         
-        public override void Execute()
+        protected override void OnExecute()
         {
             DropMgr.SetItemPos(this);
         }
@@ -69,7 +84,7 @@ namespace Lesson2
     /// </summary>
     public class DropCommand : CommandBase
     {
-        public override void Execute()
+        protected override void OnExecute()
         {
             throw new System.NotImplementedException();
         }
@@ -92,7 +107,7 @@ namespace Lesson2
         
         public AnimationCurve MoveCurve;
 
-        public override void Execute()
+        protected override void OnExecute()
         {
             DropMgr.MoveItem(this);
         }
@@ -108,7 +123,7 @@ namespace Lesson2
     /// </summary>
     public class BombCommand : CommandBase
     {
-        public override void Execute()
+        protected override void OnExecute()
         {
             throw new System.NotImplementedException();
         }
@@ -124,7 +139,7 @@ namespace Lesson2
     /// </summary>
     public class BombedCommand : CommandBase
     {
-        public override void Execute()
+        protected override void OnExecute()
         {
             throw new System.NotImplementedException();
         }
