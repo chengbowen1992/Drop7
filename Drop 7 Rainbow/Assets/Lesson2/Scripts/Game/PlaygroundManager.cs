@@ -8,6 +8,7 @@ namespace Lesson2
 {
     public class PlaygroundManager : MonoBehaviour
     {
+        public static readonly int DefaultIndexX = 3;
         public Canvas Scaler;
         public Transform DropRoot;
         public DropItem CopyOne;
@@ -17,7 +18,7 @@ namespace Lesson2
         
         private DropItem NewItem => dropManager.NewItem;
         private Rect[] detectRects;
-        public int SelectIndex = -1;
+        public int SelectIndex = DefaultIndexX;
         
         /// <summary>
         /// 创建 输入检测区域
@@ -56,7 +57,7 @@ namespace Lesson2
         /// </summary>
         public void CreateNewDrop(float executeTime = 1f,float delayTime = 0)
         {
-            SelectIndex = -1;
+            SelectIndex = DefaultIndexX;
             dropManager.CreateDropItem(executeTime, delayTime);
         }
 
@@ -79,20 +80,40 @@ namespace Lesson2
             //Debug
             for (int i = 0; i < count; i++)
             {
-                if (Input.GetMouseButtonUp(0) && detectRects[i].Contains(Input.mousePosition))
+                if (detectRects[i].Contains(Input.mousePosition))
                 {
-                    dropManager.DropDropItem(i);
-                    
-                    ExecuteCommands((ifSuccess) =>
+                    var newItem = dropManager.NewItem;
+                    if (newItem != null && newItem.IfReady)
                     {
-                        //临时
-                        dropManager.NewItem = null;
-                        CreateNewDrop(0.3f, 0);
-                        ExecuteCommands(null);
-                    }, CommandManager.ExecuteMode.eAfterFinish);
-                    return;
+                        if (Input.GetMouseButtonUp(0))
+                        {
+                            cmdManager.ResetCommand();
+                            dropManager.DropDropItem(i);
+
+                            ExecuteCommands((ifSuccess) =>
+                            {
+                                //临时
+                                CreateNewDrop(0.3f, 0);
+                                ExecuteCommands(null);
+                            }, CommandManager.ExecuteMode.eAfterFinish);
+
+                            SelectIndex = i;
+                            return;
+                        }
+                        else if (Input.GetMouseButton(0))
+                        {
+
+                            if (SelectIndex != i)
+                            {
+                                cmdManager.ResetCommand();
+                                dropManager.MoveDropItem(SelectIndex, i);
+                                ExecuteCommands(_ => { });
+                                SelectIndex = i;
+                            }
+
+                        }
+                    }
                 }
-                
             }
         }
 

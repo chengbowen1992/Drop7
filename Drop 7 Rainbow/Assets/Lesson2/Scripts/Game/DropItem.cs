@@ -28,8 +28,10 @@ namespace Lesson2
         
         public int LastVal = 0;
 
-        public DropItemState DropState { get; private set; } = DropItemState.eNone; 
+        public DropItemState DropState { get; private set; } = DropItemState.eNone;
 
+        public bool IfReady => DropState != DropItemState.eCreate;
+        
         private MoveCommand moveCmd;
 
         public void SetData(DropNode data)

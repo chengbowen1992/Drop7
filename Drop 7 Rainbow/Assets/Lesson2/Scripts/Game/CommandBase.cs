@@ -123,6 +123,7 @@ namespace Lesson2
     /// </summary>
     public class BombCommand : CommandBase
     {
+        
         protected override void OnExecute()
         {
             throw new System.NotImplementedException();

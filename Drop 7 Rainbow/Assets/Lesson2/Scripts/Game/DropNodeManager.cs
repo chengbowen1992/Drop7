@@ -20,7 +20,8 @@ namespace Lesson2
         public static readonly int CENTER_Y = 3;
         public static readonly int CENTER_X = 3;
         public static readonly int CELL_SIZE = 100;
-
+        public static readonly float DROP_LOCAL_Y = (HEIGHT + 1) * CELL_SIZE * 0.5f;
+        
         public int[,] OriginData = new int[HEIGHT, WIDTH]; //原始数据
         public int[,] HorizonMap = new int[HEIGHT, WIDTH]; //行 统计
         public int[,] VerticalMap = new int[HEIGHT, WIDTH]; //列 统计
@@ -120,6 +121,14 @@ namespace Lesson2
             CreateNewItemCommands(randomNum, executeTime, delayTime);
         }
 
+        public void MoveDropItem(int fromIndex, int toIndex)
+        {
+            if (fromIndex != toIndex)
+            {
+                CreateMoveDropItemCommand(fromIndex,toIndex);
+            }
+        }
+
         public void DropDropItem(int index)
         {
             if (CanDropNode(index))
@@ -127,6 +136,8 @@ namespace Lesson2
                 var targetIndex = TryDropNode(index, NewItem.DropData.Value);
                 
                 DropDropItemCommand(targetIndex);
+
+                NewItem = null;
             }
         }
 
@@ -435,8 +446,23 @@ namespace Lesson2
         /// </summary>
         private void CreateNewItemCommands(int randomNum, float executeTime, float delayTime)
         {
-            var newItemCmd = new CreateCommand() {CreateType = CreateItemType.eDrop, DropMgr = this, Position = new Vector3(0, (HEIGHT + 1) * CELL_SIZE * 0.5f, 0),Index = new Vector2Int(-1,-1),Val = randomNum,ExecuteTime = executeTime,DelayTime = delayTime};
+            var newItemCmd = new CreateCommand() {CreateType = CreateItemType.eDrop, DropMgr = this, Position = new Vector3(0, DROP_LOCAL_Y, 0),Index = new Vector2Int(-1,-1),Val = randomNum,ExecuteTime = executeTime,DelayTime = delayTime};
             cmdManager.AppendCommand(newItemCmd);
+        }
+
+        private void CreateMoveDropItemCommand(int fromIndex, int toIndex)
+        {
+            var curPos = NewItem.transform.localPosition;
+            var endPos = DropItem.GetPositionByIndex(new Vector2Int(toIndex, 0));
+            endPos.y = DROP_LOCAL_Y;
+            
+            //移动到初始位置
+            var moveCmd = new MoveCommand()
+            {
+                DropMgr = this, Target = NewItem, BeginPos = curPos, EndPos = endPos,
+                ExecuteTime = 0.2f, DelayTime = 0f,
+            };
+            cmdManager.AppendCommand(moveCmd);
         }
 
         private void DropDropItemCommand(Vector2Int targetIndex)

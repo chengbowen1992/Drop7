@@ -33,16 +33,25 @@ namespace Lesson2
 
         public void AppendCommand(CommandBase cmd)
         {
+#if UNITY_EDITOR
+            Debug.Log($"Cmd == Append:{cmd.GetType()}"); 
+#endif
             cmdGroup.AppendCommand(cmd);
         }
 
         public void Execute(ExecuteMode mode, Action<CommandGroup, bool> onFinish, float delayTime = 0, bool ifAutoClear = true)
         {
+#if UNITY_EDITOR
+            Debug.Log($"Cmd == ExecuteGroup:{mode}"); 
+#endif
             cmdGroup.Execute(mode, onFinish, delayTime, ifAutoClear);
         }
 
         public void ResetCommand()
         {
+#if UNITY_EDITOR
+            Debug.Log($"Cmd == ResetGroup"); 
+#endif
             cmdGroup.ResetGroup();
         }
 
@@ -78,7 +87,8 @@ namespace Lesson2
                 onComplete = onFinish;
                 IfAutoClear = ifAutoClear;
                 TotalCount = QueueTodo.Count;
-
+                
+                State = ExecuteState.eExecuting;
                 switch (Mode)
                 {
                     case ExecuteMode.eAtOnce:
@@ -130,22 +140,26 @@ namespace Lesson2
 
             private void OnCmdFinish(CommandBase cmd, bool ifSuccess)
             {
-                QueueFinish.Enqueue(cmd);
+                if (SetDoing.Remove(cmd))
+                {
+                    QueueFinish.Enqueue(cmd);
                 
-                if (IfComplete)
-                {
-                    if (IfAutoClear)
+                    if (IfComplete)
                     {
-                        ResetGroup();
+                        if (IfAutoClear)
+                        {
+                            ResetGroup();
+                        }
+
+                        State = ExecuteState.eEmpty;
+                        onComplete?.Invoke(this, true);
                     }
-                    
-                    onComplete?.Invoke(this, true);
-                }
-                else
-                {
-                    if (Mode == ExecuteMode.eAfterFinish)
+                    else
                     {
-                        ExecuteAfterOne();
+                        if (Mode == ExecuteMode.eAfterFinish)
+                        {
+                            ExecuteAfterOne();
+                        }
                     }
                 }
             }
