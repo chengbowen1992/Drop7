@@ -65,9 +65,9 @@ namespace Lesson2
             dropManager.DropDropItem(index);
         }
 
-        public void ExecuteCommands(Action<bool> onFinish)
+        public void ExecuteCommands(Action<bool> onFinish,CommandManager.ExecuteMode mode = CommandManager.ExecuteMode.eAtOnce)
         {
-            dropManager.ExecuteCommands(onFinish);
+            dropManager.ExecuteCommands(onFinish, mode);
         }
 
         #region 调试
@@ -82,15 +82,17 @@ namespace Lesson2
                 if (Input.GetMouseButtonUp(0) && detectRects[i].Contains(Input.mousePosition))
                 {
                     dropManager.DropDropItem(i);
+                    
                     ExecuteCommands((ifSuccess) =>
                     {
                         //临时
                         dropManager.NewItem = null;
                         CreateNewDrop(0.3f, 0);
                         ExecuteCommands(null);
-                    });
+                    }, CommandManager.ExecuteMode.eAfterFinish);
                     return;
                 }
+                
             }
         }
 

@@ -125,6 +125,7 @@ namespace Lesson2
             if (CanDropNode(index))
             {
                 var targetIndex = TryDropNode(index, NewItem.DropData.Value);
+                
                 DropDropItemCommand(targetIndex);
             }
         }
@@ -389,9 +390,9 @@ namespace Lesson2
             return item;
         }
 
-        public void ExecuteCommands(Action<bool> onFinish)
+        public void ExecuteCommands(Action<bool> onFinish, CommandManager.ExecuteMode mode = CommandManager.ExecuteMode.eAtOnce)
         {
-            CommandManager.Instance.Execute(CommandManager.ExecuteMode.eAtOnce, (_, ifSuccess) => { onFinish?.Invoke(ifSuccess); });
+            CommandManager.Instance.Execute(mode, (_, ifSuccess) => { onFinish?.Invoke(ifSuccess); });
         }
 
         #endregion
@@ -440,14 +441,26 @@ namespace Lesson2
 
         private void DropDropItemCommand(Vector2Int targetIndex)
         {
+            var curPos = NewItem.transform.localPosition;
             var beginPos = DropItem.GetPositionByIndex(new Vector2Int(targetIndex.x,HEIGHT));
             var endPos = DropItem.GetPositionByIndex(targetIndex);
-            var moveCmd = new MoveCommand()
+            
+            if (Vector3.Distance(curPos, beginPos) > 10f)
+            {
+                var moveCmd1 = new MoveCommand()
+                {
+                    DropMgr = this, Target = NewItem, BeginPos = curPos, EndPos = beginPos, 
+                    DelayTime = 0f, ExecuteTime = 0.2f
+                };
+                cmdManager.AppendCommand(moveCmd1);
+            }
+
+            var moveCmd2 = new MoveCommand()
             {
                 DropMgr = this, Target = NewItem, EndIndex = targetIndex, BeginPos = beginPos, EndPos = endPos, 
-                DelayTime = 0f, ExecuteTime = 0.1f
+                DelayTime = 0f, ExecuteTime = 0.5f
             };
-            cmdManager.AppendCommand(moveCmd);
+            cmdManager.AppendCommand(moveCmd2);
         }
 
         #endregion
@@ -523,7 +536,6 @@ namespace Lesson2
             target.ExecuteMove(cmd);
         }
 
-        
         #endregion
 
         #region 更新 数据信息

@@ -102,7 +102,7 @@ namespace Lesson2
     {
         public Vector3 BeginPos;
         public Vector3 EndPos;
-        
+        public bool CanBreak;
         public Vector2Int? EndIndex;
         
         public AnimationCurve MoveCurve;

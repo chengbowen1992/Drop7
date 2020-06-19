@@ -31,7 +31,7 @@ namespace Lesson2
         public DropItemState DropState { get; private set; } = DropItemState.eNone; 
 
         private MoveCommand moveCmd;
-        
+
         public void SetData(DropNode data)
         {
             DropData = data;
@@ -63,7 +63,14 @@ namespace Lesson2
         {
             if (moveCmd != null)
             {
-                Debug.LogError("MoveCommandNotFinish");
+                if (!moveCmd.CanBreak)
+                {
+                    Debug.LogError("MoveCommandNotFinish");
+                }
+
+                moveCmd.OnComplete(false);
+                moveCmd = null;
+                ChangeStateTo(DropItemState.eNone);
                 StopAllCoroutines();
             }
             
@@ -82,17 +89,20 @@ namespace Lesson2
         {
             ChangeStateTo(DropItemState.eMove);
             moveCmd = cmd;
-            
-            yield return new WaitForSeconds(moveCmd.DelayTime);
+
+            if (cmd.DelayTime > 0)
+            {
+                yield return new WaitForSeconds(cmd.DelayTime);
+            }
 
             var timeCounter = 0f;
-            var totalTime = moveCmd.ExecuteTime;
-            var beginPos = moveCmd.BeginPos;
-            var endPos = moveCmd.EndPos;
+            var totalTime = cmd.ExecuteTime;
+            var beginPos = cmd.BeginPos;
+            var endPos = cmd.EndPos;
             
             if (totalTime > 0)
             {
-                var moveCurve = moveCmd.MoveCurve ?? DefaultMoveCurve;
+                var moveCurve = cmd.MoveCurve ?? DefaultMoveCurve;
 
                 while (timeCounter <= totalTime)
                 {
@@ -108,8 +118,8 @@ namespace Lesson2
             }
 
             transform.localPosition = endPos;
-            cmd.OnComplete(true);
             moveCmd = null;
+            cmd.OnComplete(true);
             
             ChangeStateTo(DropItemState.eNone);
         }
@@ -145,6 +155,7 @@ namespace Lesson2
             cmd.OnComplete(true);
         }
 
+        
         #endregion
 
         private void ChangeStateTo(DropItemState state)
