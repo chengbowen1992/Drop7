@@ -123,10 +123,9 @@ namespace Lesson2
     /// </summary>
     public class BombCommand : CommandBase
     {
-        
         protected override void OnExecute()
         {
-            throw new System.NotImplementedException();
+            DropMgr.BombItem(this);
         }
 
         public override void Undo()
@@ -142,7 +141,7 @@ namespace Lesson2
     {
         protected override void OnExecute()
         {
-            throw new System.NotImplementedException();
+            OnComplete(true);
         }
 
         public override void Undo()

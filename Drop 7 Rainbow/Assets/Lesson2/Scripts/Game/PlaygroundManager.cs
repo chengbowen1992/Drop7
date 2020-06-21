@@ -61,11 +61,6 @@ namespace Lesson2
             dropManager.CreateDropItem(executeTime, delayTime);
         }
 
-        public void DropDropItem(int index)
-        {
-            dropManager.DropDropItem(index);
-        }
-
         public void ExecuteCommands(Action<bool> onFinish,CommandManager.ExecuteMode mode = CommandManager.ExecuteMode.eAtOnce)
         {
             dropManager.ExecuteCommands(onFinish, mode);
@@ -90,11 +85,18 @@ namespace Lesson2
                             cmdManager.ResetCommand();
                             dropManager.DropDropItem(i);
 
+                            //Drop
                             ExecuteCommands((ifSuccess) =>
                             {
-                                //临时
-                                CreateNewDrop(0.3f, 0);
-                                ExecuteCommands(null);
+                                
+                                //Bomb and Move
+                                ExecuteCommands(ifBombSuccess =>
+                                {
+                                    //临时
+                                    CreateNewDrop(0.3f, 0);
+                                    ExecuteCommands(null);
+                                }, CommandManager.ExecuteMode.eAfterFinish);
+
                             }, CommandManager.ExecuteMode.eAfterFinish);
 
                             SelectIndex = i;

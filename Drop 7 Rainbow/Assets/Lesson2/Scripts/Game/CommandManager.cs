@@ -89,6 +89,14 @@ namespace Lesson2
                 TotalCount = QueueTodo.Count;
                 
                 State = ExecuteState.eExecuting;
+
+                if (TotalCount == 0)
+                {
+                    State = ExecuteState.eEmpty;
+                    onComplete?.Invoke(this, true);
+                    return;
+                }
+
                 switch (Mode)
                 {
                     case ExecuteMode.eAtOnce:

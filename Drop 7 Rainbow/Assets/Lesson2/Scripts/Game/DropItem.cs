@@ -83,6 +83,11 @@ namespace Lesson2
         {
             StartCoroutine(PlayDropCreate(cmd));
         }
+
+        public void ExecuteBomb(BombCommand cmd)
+        {
+            StartCoroutine(PlayBomb(cmd));
+        }
         #endregion
 
         #region 具体操作
@@ -157,7 +162,12 @@ namespace Lesson2
             cmd.OnComplete(true);
         }
 
-        
+        private IEnumerator PlayBomb(BombCommand cmd)
+        {
+            yield return new WaitForSeconds(cmd.DelayTime);
+            cmd.OnComplete(true);
+            Destroy(this.gameObject);
+        }
         #endregion
 
         private void ChangeStateTo(DropItemState state)

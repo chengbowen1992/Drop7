@@ -192,8 +192,16 @@ namespace Lesson2
 
                 if (bombAll > 0)
                 {
-                    int bombCount, showCount;
-                    DealWithBomb(out bombCount, out showCount);
+                    CreateBombCommand(bombAll);
+                    
+                    int bombedCount, showCount;
+                    DealWithBomb(out bombedCount, out showCount);
+
+                    if (bombedCount > 0)
+                    {
+                        CreateBombedCommmad(bombedCount);
+                    }
+
                     DealWitMove();
                 }
 
@@ -203,7 +211,6 @@ namespace Lesson2
         /// <summary>
         /// 执行爆炸操作
         ///     解锁元素
-        ///     更新移动信息
         /// TODO 优化
         /// </summary>
         /// <param name="bombCount">爆炸次数</param>
@@ -241,7 +248,14 @@ namespace Lesson2
                     }
                 }
             }
+        }
 
+        /// <summary>
+        /// 根据爆炸 执行 下行
+        /// TODO 优化
+        /// </summary>
+        private void DealWitMove()
+        {
             //处理移动列表
             for (int j = 0; j < WIDTH; j++)
             {
@@ -266,14 +280,7 @@ namespace Lesson2
                     }
                 }
             }
-        }
-
-        /// <summary>
-        /// 根据爆炸 执行 下行
-        /// TODO 优化
-        /// </summary>
-        private void DealWitMove()
-        {
+            
             for (int j = 0; j < WIDTH; j++)
             {
                 for (int i = 0; i < HEIGHT; i++)
@@ -489,6 +496,30 @@ namespace Lesson2
             cmdManager.AppendCommand(moveCmd2);
         }
 
+        private void CreateBombCommand(int count)
+        {
+            Assert.IsTrue(count <= BombList.Count);
+
+            for (int i = BombList.Count - 1; count > 0 ; i--,count--)
+            {
+                var item = BombList[i];
+                var bombCmd = new BombCommand(){DropMgr = this, TargetIndex = item.Position, DelayTime = 0f, ExecuteTime = 0.3f};
+                cmdManager.AppendCommand(bombCmd);
+            }
+        }
+
+        private void CreateBombedCommmad(int count)
+        {
+            Assert.IsTrue(count <= BombedList.Count);
+
+            for (int i = BombedList.Count - 1; count > 0 ; i--,count--)
+            {
+                var item = BombedList[i];
+                var bombedCmd = new BombedCommand(){DropMgr = this, TargetIndex = item.Position, DelayTime = 0f, ExecuteTime = 0.3f};
+                cmdManager.AppendCommand(bombedCmd);
+            }
+        }
+
         #endregion
         
         #region 处理命令
@@ -560,6 +591,15 @@ namespace Lesson2
             }
 
             target.ExecuteMove(cmd);
+        }
+
+        public void BombItem(BombCommand cmd)
+        {
+            var targetIndex = cmd.TargetIndex;
+            var target = DropDictionary[targetIndex];
+
+            DropDictionary.Remove(targetIndex);
+            target.ExecuteBomb(cmd);
         }
 
         #endregion
