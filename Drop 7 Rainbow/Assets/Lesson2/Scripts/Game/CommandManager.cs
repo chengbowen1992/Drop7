@@ -36,6 +36,7 @@ namespace Lesson2
 #if UNITY_EDITOR
             Debug.Log($"Cmd == Append:{cmd.GetType()}"); 
 #endif
+            cmd.OnAppend();
             cmdGroup.AppendCommand(cmd);
         }
 

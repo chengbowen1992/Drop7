@@ -15,6 +15,8 @@ namespace Lesson2
 
         private Action<CommandBase,bool> onComplete;
 
+        public virtual void OnAppend(){}
+
         public void Execute(Action<CommandBase, bool> onFinish = null)
         {
             onComplete = onFinish;
@@ -107,6 +109,28 @@ namespace Lesson2
         
         public AnimationCurve MoveCurve;
 
+        public override void OnAppend()
+        {
+            if (Target != null)
+            {
+                if (Target.DropData.Position.x < 0)
+                {
+                    //TODO
+                    if (EndIndex.HasValue)
+                    {
+                        var newIndex = EndIndex.Value;
+                        
+                        Target.DropData.UpdatePosition(newIndex);
+                        DropMgr.DropDictionary.Add(newIndex, Target);
+                
+#if UNITY_EDITOR
+                        Debug.Log($"MoveItem == Add Node {newIndex}"); 
+#endif
+                    }
+                }
+            }
+        }
+
         protected override void OnExecute()
         {
             DropMgr.MoveItem(this);
@@ -123,9 +147,47 @@ namespace Lesson2
     /// </summary>
     public class BombCommand : CommandBase
     {
+        public override void OnAppend()
+        {
+            Target = DropMgr.DropDictionary[TargetIndex];
+            DropMgr.DropDictionary.Remove(TargetIndex);
+        }
+
         protected override void OnExecute()
         {
             DropMgr.BombItem(this);
+        }
+
+        public override void Undo()
+        {
+            throw new System.NotImplementedException();
+        }
+    }
+
+    public class BombedMoveCommand : MoveCommand
+    {
+        public Vector2Int FromIndex;
+        public Vector2Int ToIndex;
+
+        public override void OnAppend()
+        {
+            var dropDic = DropMgr.DropDictionary;
+            dropDic.Remove(FromIndex);
+            Target.DropData.UpdatePosition(ToIndex);
+            //Replace Bomb
+            dropDic[ToIndex] = Target;
+
+            BeginPos = DropItem.GetPositionByIndex(FromIndex);
+            EndPos = DropItem.GetPositionByIndex(ToIndex);
+
+#if UNITY_EDITOR
+            Debug.Log($"MoveItem == Move Node to {ToIndex} =< from {FromIndex}"); 
+#endif
+        }
+
+        protected override void OnExecute()
+        {
+            DropMgr.MoveBombedItem(this);
         }
 
         public override void Undo()

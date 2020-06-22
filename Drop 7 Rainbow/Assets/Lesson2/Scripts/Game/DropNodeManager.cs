@@ -300,6 +300,8 @@ namespace Lesson2
                         var newPos = new Vector2Int(j, newRow);
                         OriginData[newRow, j] = OriginData[i, j];
                         OriginData[i, j] = 0;
+
+                        CreateBombedMoveCommand(pos, newPos);
                     }
                 }
             }
@@ -521,6 +523,15 @@ namespace Lesson2
             }
         }
 
+        private void CreateBombedMoveCommand(Vector2Int lastIndex, Vector2Int newIndex)
+        {
+            var target = DropDictionary[lastIndex];
+            var bombedMoveCmd = new BombedMoveCommand()
+                {DropMgr = this, Target = target, FromIndex = lastIndex, ToIndex = newIndex};
+            
+            cmdManager.AppendCommand(bombedMoveCmd);
+        }
+
         #endregion
         
         #region 处理命令
@@ -598,15 +609,21 @@ namespace Lesson2
             target.ExecuteMove(cmd);
         }
 
+        
+        /// <summary>
+        /// 移动节点到
+        /// </summary>
+        public void MoveBombedItem(BombedMoveCommand cmd)
+        {
+            var target = cmd.Target ? cmd.Target : DropDictionary[cmd.TargetIndex];
+            
+            target.ExecuteMove(cmd);
+        }
         public void BombItem(BombCommand cmd)
         {
-            var targetIndex = cmd.TargetIndex;
-            var target = DropDictionary[targetIndex];
-
-            DropDictionary.Remove(targetIndex);
-            target.ExecuteBomb(cmd);
+            cmd.Target.ExecuteBomb(cmd);
         }
-
+        
         #endregion
 
         #region 更新 数据信息
