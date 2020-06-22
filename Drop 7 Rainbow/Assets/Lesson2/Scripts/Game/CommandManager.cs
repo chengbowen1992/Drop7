@@ -148,6 +148,10 @@ namespace Lesson2
 
             private void OnCmdFinish(CommandBase cmd, bool ifSuccess)
             {
+#if UNITY_EDITOR
+                Debug.Log(
+                    $"Cmd == {cmd.GetType()} OnCmdFinish finished:{QueueFinish.Count + 1}:last:{SetDoing.Count - 1}");
+#endif
                 if (SetDoing.Remove(cmd))
                 {
                     QueueFinish.Enqueue(cmd);

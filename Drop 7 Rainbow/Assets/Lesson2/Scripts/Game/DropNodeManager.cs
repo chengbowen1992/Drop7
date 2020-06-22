@@ -136,6 +136,8 @@ namespace Lesson2
                 var targetIndex = TryDropNode(index, NewItem.DropData.Value);
                 
                 DropDropItemCommand(targetIndex);
+                
+                UpdateDropNode(targetIndex.x, targetIndex.y);
 
                 NewItem = null;
             }
@@ -164,7 +166,6 @@ namespace Lesson2
                 {
                     OriginData[i, x] = val;
                     pos = new Vector2Int(x, i);
-                    UpdateDropNode(x, i);
                     break;
                 }
             }
@@ -467,7 +468,7 @@ namespace Lesson2
             var moveCmd = new MoveCommand()
             {
                 DropMgr = this, Target = NewItem, BeginPos = curPos, EndPos = endPos,
-                ExecuteTime = 0.2f, DelayTime = 0f,
+                ExecuteTime = 0.2f, DelayTime = 0f, CanBreak = true,
             };
             cmdManager.AppendCommand(moveCmd);
         }
@@ -588,6 +589,10 @@ namespace Lesson2
                 DropDictionary.Remove(lastIndex);
                 target.DropData.UpdatePosition(newIndex);
                 DropDictionary.Add(newIndex, target);
+                
+#if UNITY_EDITOR
+                Debug.Log($"MoveItem == Add Node {newIndex}"); 
+#endif
             }
 
             target.ExecuteMove(cmd);
