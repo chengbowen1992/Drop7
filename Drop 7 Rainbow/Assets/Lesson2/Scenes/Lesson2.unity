@@ -379,7 +379,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 115213914}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: -765806418, guid: f70555f144d8491a825f0804e09c671c, type: 3}
   m_Name: 
@@ -1160,6 +1160,7 @@ MonoBehaviour:
   Scaler: {fileID: 1462285694}
   DropRoot: {fileID: 527371524}
   CopyOne: {fileID: 1169786091}
+  SelectIndex: 3
 --- !u!1 &527371523
 GameObject:
   m_ObjectHideFlags: 0

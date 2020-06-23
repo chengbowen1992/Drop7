@@ -88,6 +88,12 @@ namespace Lesson2
         {
             StartCoroutine(PlayBomb(cmd));
         }
+
+        public void ExecuteBombed(BombedCommand cmd)
+        {
+            StartCoroutine(PlayBombed(cmd));
+        }
+
         #endregion
 
         #region 具体操作
@@ -168,6 +174,19 @@ namespace Lesson2
             cmd.OnComplete(true);
             Destroy(this.gameObject);
         }
+
+        private IEnumerator PlayBombed(BombedCommand cmd)
+        {
+            yield return new WaitForSeconds(cmd.DelayTime);
+            DropData.UpdateVal(cmd.NewValue);
+            LastVal = DropData.Value;
+                
+            //TODO 用Atlas
+            DropImage.sprite = Resources.Load<Sprite>($"Common/Images/{LastVal.ToString().Replace("-", "_")}");
+
+            cmd.OnComplete(true);
+        }
+
         #endregion
 
         private void ChangeStateTo(DropItemState state)

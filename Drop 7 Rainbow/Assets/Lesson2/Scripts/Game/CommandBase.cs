@@ -119,9 +119,9 @@ namespace Lesson2
                     if (EndIndex.HasValue)
                     {
                         var newIndex = EndIndex.Value;
-                        
+
                         Target.DropData.UpdatePosition(newIndex);
-                        DropMgr.DropDictionary.Add(newIndex, Target);
+                        DropMgr.AddToDrop(newIndex, Target);
                 
 #if UNITY_EDITOR
                         Debug.Log($"MoveItem == Add Node {newIndex}"); 
@@ -149,8 +149,8 @@ namespace Lesson2
     {
         public override void OnAppend()
         {
-            Target = DropMgr.DropDictionary[TargetIndex];
-            DropMgr.DropDictionary.Remove(TargetIndex);
+            Target = DropMgr.GetFromDrop(TargetIndex);
+            DropMgr.RemoveInDrop(TargetIndex);
         }
 
         protected override void OnExecute()
@@ -171,12 +171,10 @@ namespace Lesson2
 
         public override void OnAppend()
         {
-            var dropDic = DropMgr.DropDictionary;
-            dropDic.Remove(FromIndex);
             Target.DropData.UpdatePosition(ToIndex);
-            //Replace Bomb
-            dropDic[ToIndex] = Target;
-
+            DropMgr.RemoveInDrop(FromIndex);
+            DropMgr.AddToDrop(ToIndex, Target);
+            
             BeginPos = DropItem.GetPositionByIndex(FromIndex);
             EndPos = DropItem.GetPositionByIndex(ToIndex);
 
@@ -201,9 +199,19 @@ namespace Lesson2
     /// </summary>
     public class BombedCommand : CommandBase
     {
+        public int NewValue;
+
+        public override void OnAppend()
+        {
+            if (Target == null)
+            {
+                Target = DropMgr.GetFromDrop(TargetIndex);
+            }
+        }
+
         protected override void OnExecute()
         {
-            OnComplete(true);
+            Target.ExecuteBombed(this);
         }
 
         public override void Undo()

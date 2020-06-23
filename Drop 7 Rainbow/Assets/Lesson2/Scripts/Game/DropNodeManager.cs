@@ -31,7 +31,7 @@ namespace Lesson2
         private int[,] BottomArray = new int[HEIGHT, WIDTH]; //底部 填充
         private int BottomHeight = 0;
 
-        public readonly Dictionary<Vector2Int, DropItem> DropDictionary = new Dictionary<Vector2Int, DropItem>(WIDTH * HEIGHT); //统计字典
+        private readonly Dictionary<Vector2Int, DropItem> DropDictionary = new Dictionary<Vector2Int, DropItem>(WIDTH * HEIGHT); //统计字典
 
         public DropItem NewItem; //掉落节点
         
@@ -204,6 +204,10 @@ namespace Lesson2
                     }
 
                     DealWitMove();
+                    
+                    ClearMap();
+                    UpdateHorizonAll();
+                    UpdateVerticalAll();
                 }
 
             } while (bombAll > 0);
@@ -232,20 +236,23 @@ namespace Lesson2
                     {
                         var add = val + bombVal;
 
+                        var newVal = 0;
+                        
                         //爆炸未解锁
                         if (add < 0)
                         {
-                            OriginData[i, j] = add;
+                            newVal = add;
                         }
                         //爆炸解锁，需要随机获得新数字
                         else if (add >= 0)
                         {
-                            var newVal = GetRandomNodeNum();
-                            OriginData[i, j] = newVal;
+                            newVal = GetRandomNodeNum();
                             showCount++;
                         }
 
-                        BombedList.Add(CreateNode(new Vector2Int(j, i), OriginData[i, j]));
+                        OriginData[i, j] = newVal;
+                        bombCount++;
+                        BombedList.Add(CreateNode(new Vector2Int(j, i), newVal));
                     }
                 }
             }
@@ -518,16 +525,19 @@ namespace Lesson2
             for (int i = BombedList.Count - 1; count > 0 ; i--,count--)
             {
                 var item = BombedList[i];
-                var bombedCmd = new BombedCommand(){DropMgr = this, TargetIndex = item.Position, DelayTime = 0f, ExecuteTime = 0.3f};
+                var bombedCmd = new BombedCommand(){DropMgr = this, TargetIndex = item.Position, NewValue = item.Value,DelayTime = 0.3f, ExecuteTime = 0.3f};
                 cmdManager.AppendCommand(bombedCmd);
             }
         }
 
         private void CreateBombedMoveCommand(Vector2Int lastIndex, Vector2Int newIndex)
         {
-            var target = DropDictionary[lastIndex];
+            var target = GetFromDrop(lastIndex);
             var bombedMoveCmd = new BombedMoveCommand()
-                {DropMgr = this, Target = target, FromIndex = lastIndex, ToIndex = newIndex};
+            {
+                DropMgr = this, Target = target, FromIndex = lastIndex, ToIndex = newIndex, DelayTime = 0.3f,
+                ExecuteTime = 0.2f
+            };
             
             cmdManager.AppendCommand(bombedMoveCmd);
         }
@@ -552,7 +562,7 @@ namespace Lesson2
                     item.transform.localPosition = cmd.Position.Value;
                 }
 
-                DropDictionary.Add(cmd.Index, item);
+                AddToDrop(cmd.Index, item);
                 item.ExecuteCreate(cmd);
             }
             //掉落
@@ -580,7 +590,7 @@ namespace Lesson2
         /// </summary>
         public void SetItemPos(SetPositionCommand cmd)
         {
-            var target = cmd.Target ? cmd.Target : DropDictionary[cmd.TargetIndex];
+            var target = cmd.Target ? cmd.Target : GetFromDrop(cmd.TargetIndex);
 
             target.transform.localPosition = cmd.Position;
         }
@@ -590,21 +600,21 @@ namespace Lesson2
         /// </summary>
         public void MoveItem(MoveCommand cmd)
         {
-            var target = cmd.Target ? cmd.Target : DropDictionary[cmd.TargetIndex];
+            var target = cmd.Target ? cmd.Target : GetFromDrop(cmd.TargetIndex);
 
-            if (cmd.EndIndex.HasValue)
-            {
-                var lastIndex = target.DropData.Position;
-                var newIndex = cmd.EndIndex.Value;
-
-                DropDictionary.Remove(lastIndex);
-                target.DropData.UpdatePosition(newIndex);
-                DropDictionary.Add(newIndex, target);
-                
-#if UNITY_EDITOR
-                Debug.Log($"MoveItem == Add Node {newIndex}"); 
-#endif
-            }
+//             if (cmd.EndIndex.HasValue)
+//             {
+//                 var lastIndex = target.DropData.Position;
+//                 var newIndex = cmd.EndIndex.Value;
+//
+//                 RemoveInDrop(lastIndex);
+//                 target.DropData.UpdatePosition(newIndex);
+//                 AddToDrop(newIndex, target);
+//                 
+// #if UNITY_EDITOR
+//                 Debug.Log($"MoveItem == Add Node {newIndex}"); 
+// #endif
+//             }
 
             target.ExecuteMove(cmd);
         }
@@ -615,10 +625,10 @@ namespace Lesson2
         /// </summary>
         public void MoveBombedItem(BombedMoveCommand cmd)
         {
-            var target = cmd.Target ? cmd.Target : DropDictionary[cmd.TargetIndex];
-            
+            var target = cmd.Target ? cmd.Target : GetFromDrop(cmd.TargetIndex);
             target.ExecuteMove(cmd);
         }
+        
         public void BombItem(BombCommand cmd)
         {
             cmd.Target.ExecuteBomb(cmd);
@@ -772,7 +782,7 @@ namespace Lesson2
 
                     if (val == 0)
                     {
-                        BombMap[i, j] = 0;
+                        // BombMap[i, j] = 0;
                     }
                     else
                     {
@@ -780,7 +790,7 @@ namespace Lesson2
                         var ver = VerticalMap[i, j];
 
                         var ifBomb = val == hor || val == ver;
-                        BombMap[i, j] = ifBomb ? -1 : 0;
+                        BombMap[i, j] = ifBomb ? -1 : BombMap[i, j];
                         if (ifBomb)
                         {
                             bombItem(i, j);
@@ -796,6 +806,60 @@ namespace Lesson2
 
         #endregion
 
+        #region 处理字典
+
+        public DropItem GetFromDrop(Vector2Int index)
+        {
+#if UNITY_EDITOR
+            Debug.Log($"Drop == Get from {index} : {DropDictionary[index]}");
+#endif
+
+            return DropDictionary[index];
+        }
+
+        public void AddToDrop(Vector2Int index, DropItem item)
+        {
+#if UNITY_EDITOR
+            Debug.Log($"Drop == Add to {index} : {item.DropData.Value}");
+
+            if (DropDictionary.ContainsKey(index))
+            {
+                Debug.LogError($"Drop == Add to {index} : old:{DropDictionary[index]}");
+            }
+#endif
+            DropDictionary.Add(index, item);
+        }
+
+        public void RemoveInDrop(Vector2Int index)
+        {
+#if UNITY_EDITOR
+            Debug.Log($"Drop == Remove from {index}");
+
+            if (DropDictionary.ContainsKey(index))
+            {
+                Debug.Log($"Drop == Remove from {index} have value :{DropDictionary[index].DropData.Value}");
+            }
+#endif
+            DropDictionary.Remove(index);
+        }
+
+        public void ReplaceInDrop(Vector2Int from, Vector2Int to)
+        {
+#if UNITY_EDITOR
+            Debug.Log($"Drop == Replace from {from} : {to} : with {DropDictionary[from]}");
+            
+            if (DropDictionary.ContainsKey(to))
+            {
+                Debug.LogError($"Drop == Replace to {to} : old:{DropDictionary[to]}");
+            }
+#endif
+            var item = DropDictionary[from];
+            DropDictionary.Add(to,item);
+            DropDictionary.Remove(from);
+        }
+
+        #endregion
+        
         #region 测试
 
         public enum DebugInfoType

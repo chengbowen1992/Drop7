@@ -35,7 +35,7 @@ namespace Lesson2
             for (int i = 0; i < total; i++)
             {
                 int deltaIndex = i - center;
-                var centerPos = new Vector2(deltaIndex * cell + cenPos.x, cenPos.y);
+                var centerPos = new Vector2(deltaIndex * cell * Scaler.scaleFactor + cenPos.x, cenPos.y);
                 var rectSize = new Vector2(cell,cell * DropNodeManager.HEIGHT) * Scaler.scaleFactor;
                 var rectPos = centerPos - rectSize * 0.5f;
                 detectRects[i] = new Rect(rectPos, rectSize);
@@ -88,7 +88,6 @@ namespace Lesson2
                             //Drop
                             ExecuteCommands((ifSuccess) =>
                             {
-                                
                                 //Bomb and Move
                                 ExecuteCommands(ifBombSuccess =>
                                 {

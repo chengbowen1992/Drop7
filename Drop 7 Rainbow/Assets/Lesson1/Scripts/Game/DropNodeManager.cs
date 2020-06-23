@@ -119,6 +119,10 @@ namespace Lesson1
                     int bombCount, showCount;
                     DealWithBomb(out bombCount, out showCount);
                     DealWitMove();
+                    
+                    ClearMap();
+                    UpdateHorizonAll();
+                    UpdateVerticalAll();
                 }
 
             } while (bombAll > 0);
