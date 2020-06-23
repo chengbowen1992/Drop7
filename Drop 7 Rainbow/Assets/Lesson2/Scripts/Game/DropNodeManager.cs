@@ -118,7 +118,7 @@ namespace Lesson2
                 randomNum = randomMgr.Next(-2, DropNodeManager.WIDTH);
             }
 
-            CreateNewItemCommands(randomNum, executeTime, delayTime);
+            CreateDropItemCommands(randomNum, executeTime, delayTime);
         }
 
         public void MoveDropItem(int fromIndex, int toIndex)
@@ -137,7 +137,7 @@ namespace Lesson2
                 
                 DropDropItemCommand(targetIndex);
                 
-                UpdateDropNode(targetIndex.x, targetIndex.y);
+                UpdateAllNode();
 
                 NewItem = null;
             }
@@ -176,19 +176,16 @@ namespace Lesson2
         /// <summary>
         /// 掉落后的更新
         /// </summary>
-        private void UpdateDropNode(int x, int y)
+        private void UpdateAllNode()
         {
-            //为了便于测试，置于前方
-            ClearMap();
-
-            UpdateVerticalByCol(x);
-
-            UpdateHorizonByRow(y);
-
             int bombAll = 0;
-
+            
             do
             {
+                ClearMap();
+                UpdateHorizonAll();
+                UpdateVerticalAll();
+                
                 bombAll = UpdateBombAll(); //可以优化
 
                 if (bombAll > 0)
@@ -204,10 +201,6 @@ namespace Lesson2
                     }
 
                     DealWitMove();
-                    
-                    ClearMap();
-                    UpdateHorizonAll();
-                    UpdateVerticalAll();
                 }
 
             } while (bombAll > 0);
@@ -332,9 +325,11 @@ namespace Lesson2
                 for (int j = 0; j < WIDTH; j++)
                 {
                     var toHeight = i + lineHeight;
+                    var value = OriginData[i, j];
+
                     if (toHeight >= HEIGHT)
                     {
-                        if (OriginData[i, j] != 0)
+                        if (value != 0)
                         {
                             var outNode = CreateNode(new Vector2Int(j, toHeight), OriginData[i, j]);
                             OutList.Add(outNode);
@@ -342,7 +337,11 @@ namespace Lesson2
                     }
                     else
                     {
-                        OriginData[toHeight, j] = OriginData[i, j];
+                        OriginData[toHeight, j] = value;
+                        if (value != 0)
+                        {
+                            CreateBombedMoveCommand(new Vector2Int(j, i), new Vector2Int(j, toHeight));
+                        }
                     }
                 }
             }
@@ -353,27 +352,15 @@ namespace Lesson2
                 for (int j = 0; j < WIDTH; j++)
                 {
                     var randVal = -2 /*randomMgr.Next(0, 10000) % 2 == 0 ? GetRandomNodeNum() : randomMgr.Next(-2, 0)*/;
-                    BottomArray[i, j] = randVal;
-                    OriginData[i, j] = BottomArray[i, j];
+                    OriginData[i, j] = BottomArray[i, j] = randVal;
+
+                    CreateBottomItemCommands(new Vector2Int(j, i), randVal, new Vector3(), 0.2f, 0.1f);
                 }
             }
 
-            UpdateAddBottom();
+            UpdateAllNode();
 
             return OutList.Count == 0;
-        }
-
-        private void UpdateAddBottom()
-        {
-            UpdateVerticalAll();
-            UpdateHorizonAll();
-            var bombAll = UpdateBombAll();
-            if (bombAll > 0)
-            {
-                int bombCount, showCount;
-                DealWithBomb(out bombCount, out showCount);
-                DealWitMove();
-            }
         }
 
         /// <summary>
@@ -398,7 +385,6 @@ namespace Lesson2
         private int GetRandomNodeNum()
         {
             return randomMgr.Next(1, MAX_NUM + 1);
-
         }
 
         public DropNode CreateNode(Vector2Int pos, int val)
@@ -461,10 +447,31 @@ namespace Lesson2
         /// <summary>
         /// 生成 掉落元素
         /// </summary>
-        private void CreateNewItemCommands(int randomNum, float executeTime, float delayTime)
+        private void CreateDropItemCommands(int randomNum, float executeTime, float delayTime)
         {
             var newItemCmd = new CreateCommand() {CreateType = CreateItemType.eDrop, DropMgr = this, Position = new Vector3(0, DROP_LOCAL_Y, 0),Index = new Vector2Int(-1,-1),Val = randomNum,ExecuteTime = executeTime,DelayTime = delayTime};
             cmdManager.AppendCommand(newItemCmd);
+        }
+        
+        /// <summary>
+        /// 生成底层元素
+        /// </summary>
+        private void CreateBottomItemCommands(Vector2Int index, int val, Vector3 pos, float executeTime, float delayTime)
+        {
+            var newItemCmd = new CreateCommand()
+            {
+                CreateType = CreateItemType.eDrop, DropMgr = this, Position = pos, Index = index, Val = val,
+                ExecuteTime = executeTime, DelayTime = delayTime
+            };
+            cmdManager.AppendCommand(newItemCmd);
+            
+            var endPos = DropItem.GetPositionByIndex(index);
+            var moveCmd = new MoveCommand()
+            {
+                DropMgr = this, TargetIndex = index, BeginPos = pos, EndPos = endPos,
+                ExecuteTime = executeTime, DelayTime = delayTime
+            };
+            cmdManager.AppendCommand(moveCmd);
         }
 
         private void CreateMoveDropItemCommand(int fromIndex, int toIndex)
@@ -513,7 +520,7 @@ namespace Lesson2
             for (int i = BombList.Count - 1; count > 0 ; i--,count--)
             {
                 var item = BombList[i];
-                var bombCmd = new BombCommand(){DropMgr = this, TargetIndex = item.Position, DelayTime = 0f, ExecuteTime = 0.3f};
+                var bombCmd = new BombCommand(){DropMgr = this, TargetIndex = item.Position, DelayTime = 0.1f, ExecuteTime = 0.3f};
                 cmdManager.AppendCommand(bombCmd);
             }
         }

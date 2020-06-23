@@ -50,7 +50,7 @@ namespace Lesson2
         public Vector3? Position;
 
         public int Val;
-        
+
         protected override void OnExecute()
         {
             DropMgr.CreateItem(this);
@@ -219,4 +219,5 @@ namespace Lesson2
             throw new System.NotImplementedException();
         }
     }
+    
 }

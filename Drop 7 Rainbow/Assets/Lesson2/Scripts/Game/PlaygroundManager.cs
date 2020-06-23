@@ -19,6 +19,8 @@ namespace Lesson2
         private DropItem NewItem => dropManager.NewItem;
         private Rect[] detectRects;
         public int SelectIndex = DefaultIndexX;
+
+        public int DropCount = 0;
         
         /// <summary>
         /// 创建 输入检测区域
@@ -50,6 +52,7 @@ namespace Lesson2
             cmdManager = CommandManager.Instance;
             dropManager = new DropNodeManager {DropItemOne = CopyOne, DropRoot = DropRoot};
             dropManager.LoadData(dataArray);
+            DropCount = 0;
         }
 
         /// <summary>
@@ -85,12 +88,19 @@ namespace Lesson2
                             cmdManager.ResetCommand();
                             dropManager.DropDropItem(i);
 
+                            DropCount++;
+                            
                             //Drop
                             ExecuteCommands((ifSuccess) =>
                             {
                                 //Bomb and Move
                                 ExecuteCommands(ifBombSuccess =>
                                 {
+                                    // if ((DropCount + 1) % 10 == 0)
+                                    // {
+                                    //     dropManager.AddBottomLine(1);
+                                    // }
+
                                     //临时
                                     CreateNewDrop(0.3f, 0);
                                     ExecuteCommands(null);

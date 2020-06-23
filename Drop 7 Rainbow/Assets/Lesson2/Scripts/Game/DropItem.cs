@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Timers;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -25,6 +26,10 @@ namespace Lesson2
         public AnimationCurve DefaultScaleCurveY;
         
         public AnimationCurve DefaultMoveCurve;
+        
+        public AnimationCurve DefaultBombScaleCurve;
+        public AnimationCurve DefaultBombAlphaCurve;
+        public AnimationCurve DefaultBombedScaleCurve;
         
         public int LastVal = 0;
 
@@ -171,6 +176,26 @@ namespace Lesson2
         private IEnumerator PlayBomb(BombCommand cmd)
         {
             yield return new WaitForSeconds(cmd.DelayTime);
+
+            float totalTime = cmd.ExecuteTime;
+            var timeCounter = 0f;
+
+            if (totalTime > 0)
+            {
+                while (timeCounter <= totalTime)
+                {
+                    var percent = timeCounter / totalTime;
+                    var currentScale = DefaultBombScaleCurve.Evaluate(percent);
+                    var currentAlpha = DefaultBombAlphaCurve.Evaluate(percent);
+
+                    transform.localScale = new Vector3(currentScale, currentScale, 1);
+                    DropImage.color = new Color(1,1,1,currentAlpha);
+                    
+                    timeCounter += Time.deltaTime;
+                    yield return null;
+                }
+            }
+
             cmd.OnComplete(true);
             Destroy(this.gameObject);
         }
@@ -180,7 +205,22 @@ namespace Lesson2
             yield return new WaitForSeconds(cmd.DelayTime);
             DropData.UpdateVal(cmd.NewValue);
             LastVal = DropData.Value;
-                
+            
+            float totalTime = cmd.ExecuteTime;
+            var timeCounter = 0f;
+
+            if (totalTime > 0)
+            {
+                while (timeCounter <= totalTime)
+                {
+                    var percent = timeCounter / totalTime;
+                    var currentScale = DefaultBombedScaleCurve.Evaluate(percent);
+                    transform.localScale = new Vector3(currentScale, currentScale, 1);
+                    timeCounter += Time.deltaTime;
+                    yield return null;
+                }
+            }
+            
             //TODO 用Atlas
             DropImage.sprite = Resources.Load<Sprite>($"Common/Images/{LastVal.ToString().Replace("-", "_")}");
 
