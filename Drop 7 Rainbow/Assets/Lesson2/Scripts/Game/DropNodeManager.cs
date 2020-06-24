@@ -354,7 +354,7 @@ namespace Lesson2
                     var randVal = -2 /*randomMgr.Next(0, 10000) % 2 == 0 ? GetRandomNodeNum() : randomMgr.Next(-2, 0)*/;
                     OriginData[i, j] = BottomArray[i, j] = randVal;
 
-                    CreateBottomItemCommands(new Vector2Int(j, i), randVal, new Vector3(), 0.2f, 0.1f);
+                    CreateBottomItemCommands(new Vector2Int(j, i), randVal, 0.2f, 0.1f);
                 }
             }
 
@@ -396,11 +396,12 @@ namespace Lesson2
             return node;
         }
 
-        public DropItem CreateItem(DropNode node)
+        private DropItem CreateItem(DropNode node,bool ifShow = true)
         {
             var item = Object.Instantiate(DropItemOne, DropRoot, true) as DropItem;
             item.gameObject.SetActive(true);
             item.SetData(node);
+            if(!ifShow) item.gameObject.SetActive(false);
             return item;
         }
 
@@ -456,11 +457,12 @@ namespace Lesson2
         /// <summary>
         /// 生成底层元素
         /// </summary>
-        private void CreateBottomItemCommands(Vector2Int index, int val, Vector3 pos, float executeTime, float delayTime)
+        private void CreateBottomItemCommands(Vector2Int index, int val, float executeTime, float delayTime)
         {
+            Vector3 pos = DropItem.GetPositionByIndex(index - new Vector2Int(0, 1));
             var newItemCmd = new CreateCommand()
             {
-                CreateType = CreateItemType.eDrop, DropMgr = this, Position = pos, Index = index, Val = val,
+                CreateType = CreateItemType.eBottom, DropMgr = this, Position = pos, Index = index, Val = val,
                 ExecuteTime = executeTime, DelayTime = delayTime
             };
             cmdManager.AppendCommand(newItemCmd);
@@ -468,7 +470,7 @@ namespace Lesson2
             var endPos = DropItem.GetPositionByIndex(index);
             var moveCmd = new MoveCommand()
             {
-                DropMgr = this, TargetIndex = index, BeginPos = pos, EndPos = endPos,
+                DropMgr = this, Target = newItemCmd.Target, BeginPos = pos, EndPos = endPos,
                 ExecuteTime = executeTime, DelayTime = delayTime
             };
             cmdManager.AppendCommand(moveCmd);
@@ -553,26 +555,15 @@ namespace Lesson2
         
         #region 处理命令
 
-        /// <summary>
-        /// 创建 元素节点
-        /// </summary>
-        public void CreateItem(CreateCommand cmd)
+        public void PrepareItem(CreateCommand cmd)
         {
             var node = CreateNode(cmd.Index, cmd.Val);
             var item = CreateItem(node);
-            
-            //正常加载
+            cmd.Target = item;
             if (cmd.CreateType == CreateItemType.eLoad)
             {
-                if (cmd.Position.HasValue)
-                {
-                    item.transform.localPosition = cmd.Position.Value;
-                }
-
                 AddToDrop(cmd.Index, item);
-                item.ExecuteCreate(cmd);
             }
-            //掉落
             else if (cmd.CreateType == CreateItemType.eDrop)
             {
                 if (NewItem != null)
@@ -580,15 +571,51 @@ namespace Lesson2
                     Debug.LogError("上一个掉落物未销毁！");
                     Object.Destroy(NewItem.gameObject);
                 }
-
                 NewItem = item;
-                
+            }
+            else if (cmd.CreateType == CreateItemType.eBottom)
+            {
+                AddToDrop(cmd.Index, item);
+            }
+
+        }
+
+        /// <summary>
+        /// 创建 元素节点
+        /// </summary>
+        public void CreateItem(CreateCommand cmd)
+        {
+            var target = cmd.Target;
+            target.gameObject.SetActive(true);
+            
+            //正常加载
+            if (cmd.CreateType == CreateItemType.eLoad)
+            {
                 if (cmd.Position.HasValue)
                 {
-                    item.transform.localPosition = cmd.Position.Value;
+                    target.transform.localPosition = cmd.Position.Value;
                 }
                 
-                item.ExecuteCreateDrop(cmd);
+                target.ExecuteCreate(cmd);
+            }
+            //掉落
+            else if (cmd.CreateType == CreateItemType.eDrop)
+            {
+                if (cmd.Position.HasValue)
+                {
+                    target.transform.localPosition = cmd.Position.Value;
+                }
+                
+                target.ExecuteCreateDrop(cmd);
+            }
+            else if (cmd.CreateType == CreateItemType.eBottom)
+            {
+                if (cmd.Position.HasValue)
+                {
+                    target.transform.localPosition = cmd.Position.Value;
+                }
+                
+                target.ExecuteCreate(cmd);
             }
         }
 

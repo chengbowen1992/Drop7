@@ -51,6 +51,11 @@ namespace Lesson2
 
         public int Val;
 
+        public override void OnAppend()
+        {
+            DropMgr.PrepareItem(this);
+        }
+
         protected override void OnExecute()
         {
             DropMgr.CreateItem(this);
