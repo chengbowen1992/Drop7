@@ -39,45 +39,6 @@ namespace Lesson2
                 PlaygroundMgr.ExecuteCommands(null);
             });
         }
-
-        void Update()
-        {
-            /*
-            if (IfFinish)
-            {
-                return;
-            }
-
-            if (Input.GetMouseButtonDown(0))
-            {
-                if (clickTimes % 10 == 9)
-                {
-                    var lineHeight = 1; //clickTimes / 10 + 1;
-                    Debug.Log($"Add Line Num:{lineHeight}");
-                    IfFinish = !dropNodeManager.AddBottomLine(lineHeight);
-                }
-                else
-                {
-                    int randomX = Random.Range(0, DropNodeManager.WIDTH);
-                    int randomNum = Random.Range(-2, DropNodeManager.WIDTH);
-                    if (randomNum != 0)
-                    {
-                        IfFinish = !dropNodeManager.CanDropNode(randomX);
-                        if (!IfFinish)
-                        {
-                            Debug.Log($"Drop Num:{randomNum} to Col{randomX}");
-                            dropNodeManager.TryDropNode(randomX, randomNum);
-                        }
-                        else
-                        {
-                            Debug.Log("Finish");
-                        }
-                    }   
-                }
-
-                clickTimes++;
-            }
-            */
-        }
+        
     }
 }

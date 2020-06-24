@@ -9,6 +9,7 @@ namespace Lesson2
     public class PlaygroundManager : MonoBehaviour
     {
         public static readonly int DefaultIndexX = 3;
+        public static readonly int OneTurnCount = 10;
         public Canvas Scaler;
         public Transform DropRoot;
         public DropItem CopyOne;
@@ -74,8 +75,7 @@ namespace Lesson2
         private void Update()
         {
             int count = detectRects?.Length ?? 0;
-         
-            //Debug
+            
             for (int i = 0; i < count; i++)
             {
                 if (detectRects[i].Contains(Input.mousePosition))
@@ -96,14 +96,29 @@ namespace Lesson2
                                 //Bomb and Move
                                 ExecuteCommands(ifBombSuccess =>
                                 {
-                                    // if ((DropCount + 1) % 10 == 0)
-                                    // {
-                                    //     dropManager.AddBottomLine(1);
-                                    // }
-
-                                    //临时
-                                    CreateNewDrop(0.3f, 0);
-                                    ExecuteCommands(null);
+                                    if (DropCount % OneTurnCount == 0)
+                                    {
+                                        dropManager.AddBottomLine(1);
+                                        
+                                        //Add Line
+                                        ExecuteCommands(ifBottomSuccess =>
+                                        {
+                                            dropManager.UpdateAllNode();
+                                            
+                                            ExecuteCommands(ifUpdateSuccess =>
+                                            {
+                                                CreateNewDrop(0.3f, 0);
+                                                ExecuteCommands(null, CommandManager.ExecuteMode.eAtOnce);
+                                            }, CommandManager.ExecuteMode.eAfterFinish);
+                                            
+                                        }, CommandManager.ExecuteMode.eAtOnce);
+                                    }
+                                    else
+                                    {
+                                        CreateNewDrop(0.3f, 0);
+                                        ExecuteCommands(null, CommandManager.ExecuteMode.eAtOnce);
+                                    }
+                                    
                                 }, CommandManager.ExecuteMode.eAfterFinish);
 
                             }, CommandManager.ExecuteMode.eAfterFinish);

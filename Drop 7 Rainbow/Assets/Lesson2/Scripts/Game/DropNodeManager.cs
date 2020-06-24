@@ -176,7 +176,7 @@ namespace Lesson2
         /// <summary>
         /// 掉落后的更新
         /// </summary>
-        private void UpdateAllNode()
+        public void UpdateAllNode()
         {
             int bombAll = 0;
             
@@ -354,11 +354,9 @@ namespace Lesson2
                     var randVal = -2 /*randomMgr.Next(0, 10000) % 2 == 0 ? GetRandomNodeNum() : randomMgr.Next(-2, 0)*/;
                     OriginData[i, j] = BottomArray[i, j] = randVal;
 
-                    CreateBottomItemCommands(new Vector2Int(j, i), randVal, 0.2f, 0.1f);
+                    CreateBottomItemCommands(new Vector2Int(j, i), randVal, 0.4f, 0.2f);
                 }
             }
-
-            UpdateAllNode();
 
             return OutList.Count == 0;
         }
@@ -463,7 +461,7 @@ namespace Lesson2
             var newItemCmd = new CreateCommand()
             {
                 CreateType = CreateItemType.eBottom, DropMgr = this, Position = pos, Index = index, Val = val,
-                ExecuteTime = executeTime, DelayTime = delayTime
+                ExecuteTime = 0, DelayTime = 0
             };
             cmdManager.AppendCommand(newItemCmd);
             
