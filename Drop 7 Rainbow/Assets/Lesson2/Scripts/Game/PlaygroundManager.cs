@@ -9,13 +9,13 @@ namespace Lesson2
     public class PlaygroundManager : MonoBehaviour
     {
         public static readonly int DefaultIndexX = 3;
-        public static readonly int OneTurnCount = 10;
+        public static readonly int OneTurnCount = 3;
         public Canvas Scaler;
         public Transform DropRoot;
         public DropItem CopyOne;
     
         public DropNodeManager dropManager;
-        public CommandManager cmdManager;
+        public CommandUtil commandMgr;
         
         private DropItem NewItem => dropManager.NewItem;
         private Rect[] detectRects;
@@ -50,24 +50,23 @@ namespace Lesson2
         /// </summary>
         public void LoadData(int[,] dataArray)
         {
-            cmdManager = CommandManager.Instance;
+            commandMgr = CommandUtil.Instance;
             dropManager = new DropNodeManager {DropItemOne = CopyOne, DropRoot = DropRoot};
-            dropManager.LoadData(dataArray);
+            BaseGameCommand.DropMgr = dropManager;
+            dropManager.LoadData(dataArray, _ =>
+            {
+                CreateNewDrop(null,0.3f, 0);
+            });
             DropCount = 0;
         }
 
         /// <summary>
         /// 创建掉落物
         /// </summary>
-        public void CreateNewDrop(float executeTime = 1f,float delayTime = 0)
+        public void CreateNewDrop(Action<bool> onComplete, float executeTime = 1f, float delayTime = 0)
         {
             SelectIndex = DefaultIndexX;
-            dropManager.CreateDropItem(executeTime, delayTime);
-        }
-
-        public void ExecuteCommands(Action<bool> onFinish,CommandManager.ExecuteMode mode = CommandManager.ExecuteMode.eAtOnce)
-        {
-            dropManager.ExecuteCommands(onFinish, mode);
+            dropManager.CreateDropItem(executeTime, delayTime, onComplete);
         }
 
         #region 调试
@@ -85,55 +84,30 @@ namespace Lesson2
                     {
                         if (Input.GetMouseButtonUp(0))
                         {
-                            cmdManager.ResetCommand();
-                            dropManager.DropDropItem(i);
+                            dropManager.DropDropItem(i, onDropComplete =>
+                            {
+                                if (DropCount % OneTurnCount == 0)
+                                {
+                                    dropManager.AddBottomLine(1 ,onAddLineComplete=>
+                                    {
+                                        CreateNewDrop(null,0.3f, 0);
+                                    });
+                                }
+                                else
+                                {
+                                    CreateNewDrop(null,0.3f, 0);
+                                }
+                            });
 
                             DropCount++;
-                            
-                            //Drop
-                            ExecuteCommands((ifSuccess) =>
-                            {
-                                //Bomb and Move
-                                ExecuteCommands(ifBombSuccess =>
-                                {
-                                    if (DropCount % OneTurnCount == 0)
-                                    {
-                                        dropManager.AddBottomLine(1);
-                                        
-                                        //Add Line
-                                        ExecuteCommands(ifBottomSuccess =>
-                                        {
-                                            dropManager.UpdateAllNode();
-                                            
-                                            ExecuteCommands(ifUpdateSuccess =>
-                                            {
-                                                CreateNewDrop(0.3f, 0);
-                                                ExecuteCommands(null, CommandManager.ExecuteMode.eAtOnce);
-                                            }, CommandManager.ExecuteMode.eAfterFinish);
-                                            
-                                        }, CommandManager.ExecuteMode.eAtOnce);
-                                    }
-                                    else
-                                    {
-                                        CreateNewDrop(0.3f, 0);
-                                        ExecuteCommands(null, CommandManager.ExecuteMode.eAtOnce);
-                                    }
-                                    
-                                }, CommandManager.ExecuteMode.eAfterFinish);
-
-                            }, CommandManager.ExecuteMode.eAfterFinish);
-
                             SelectIndex = i;
                             return;
                         }
                         else if (Input.GetMouseButton(0))
                         {
-
                             if (SelectIndex != i)
                             {
-                                cmdManager.ResetCommand();
                                 dropManager.MoveDropItem(SelectIndex, i);
-                                ExecuteCommands(_ => { });
                                 SelectIndex = i;
                             }
 

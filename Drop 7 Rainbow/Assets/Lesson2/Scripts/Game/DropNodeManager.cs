@@ -35,17 +35,16 @@ namespace Lesson2
 
         public DropItem NewItem; //掉落节点
         
-        public List<DropNode> MoveList = new List<DropNode>(); //移动列表
         public List<DropNode> BombList = new List<DropNode>(); //爆炸列表
         public List<DropNode> BombedList = new List<DropNode>(); //爆炸波及列表
         public List<DropNode> OutList = new List<DropNode>(); //超出区域列表
-
+        public List<ValueTuple<Vector2Int,Vector2Int>> MoveList = new List<ValueTuple<Vector2Int, Vector2Int>>();
+        
         public Transform DropRoot;
         public DropItem DropItemOne;
 
         private Random randomMgr;
-        private CommandManager cmdManager;
-
+        private CommandUtil commandMgr;
         #region 执行操作
 
         //流程
@@ -72,14 +71,14 @@ namespace Lesson2
         /// <summary>
         /// 加载初始信息
         /// </summary>
-        public void LoadData(int[,] data)
+        public void LoadData(int[,] data, Action<bool> onFinish)
         {
             Assert.IsNotNull(data);
             Assert.IsTrue(data.GetLength(0) == HEIGHT);
             Assert.IsTrue(data.GetLength(1) == WIDTH);
 
             randomMgr = new Random(DateTime.Now.Millisecond);
-            cmdManager = CommandManager.Instance;
+            commandMgr = CommandUtil.Instance;
             
             BombList.Clear();
             BombedList.Clear();
@@ -104,13 +103,15 @@ namespace Lesson2
             //初始化 行 计数信息
             UpdateHorizonAll();
             
-            CreateLoadCommands();
+            var loadGroup = GenerateLoadCommands();
+            commandMgr.AppendGroup(loadGroup);
+            commandMgr.Execute(onFinish);
         }
 
         /// <summary>
         /// 产生掉落元素 
         /// </summary>
-        public void CreateDropItem(float executeTime ,float delayTime)
+        public void CreateDropItem(float executeTime ,float delayTime,Action<bool> onComplete)
         {
             int randomNum = 0;
             while (randomNum == 0)
@@ -118,28 +119,31 @@ namespace Lesson2
                 randomNum = randomMgr.Next(-2, DropNodeManager.WIDTH);
             }
 
-            CreateDropItemCommands(randomNum, executeTime, delayTime);
+            var createDropGroup = GenerateCreateDropCommand(randomNum, delayTime, executeTime);
+            commandMgr.AppendGroup(createDropGroup);
+            commandMgr.Execute(onComplete);
         }
 
         public void MoveDropItem(int fromIndex, int toIndex)
         {
             if (fromIndex != toIndex)
             {
-                CreateMoveDropItemCommand(fromIndex,toIndex);
+                var moveHorizonCmd = GenerateMoveHorizontalCommand(toIndex, 0f, 0.2f);
+                commandMgr.ExecuteNotWait(moveHorizonCmd);
             }
         }
 
-        public void DropDropItem(int index)
+        public void DropDropItem(int index,Action<bool> onComplete)
         {
             if (CanDropNode(index))
             {
                 var targetIndex = TryDropNode(index, NewItem.DropData.Value);
-                
-                DropDropItemCommand(targetIndex);
-                
-                UpdateAllNode();
 
+                var dropGroup = GenerateDropItemCommands(targetIndex);
+                commandMgr.AppendGroup(dropGroup);
+                UpdateAllNode();
                 NewItem = null;
+                commandMgr.Execute(onComplete);
             }
         }
 
@@ -190,17 +194,17 @@ namespace Lesson2
 
                 if (bombAll > 0)
                 {
-                    CreateBombCommand(bombAll);
-                    
                     int bombedCount, showCount;
                     DealWithBomb(out bombedCount, out showCount);
 
-                    if (bombedCount > 0)
-                    {
-                        CreateBombedCommmad(bombedCount);
-                    }
-
+                    var bombGroup = GenerateBombCommands(0.1f,0.3f,0.2f,0.3f);
+                    
                     DealWitMove();
+
+                    var bombMoveGroup = GenerateBombMoveCommands(0.1f,0.2f);
+                    
+                    commandMgr.AppendGroup(bombGroup);
+                    commandMgr.AppendGroup(bombMoveGroup);
                 }
 
             } while (bombAll > 0);
@@ -301,7 +305,7 @@ namespace Lesson2
                         OriginData[newRow, j] = OriginData[i, j];
                         OriginData[i, j] = 0;
 
-                        CreateBombedMoveCommand(pos, newPos);
+                        MoveList.Add(ValueTuple.Create(pos, newPos));
                     }
                 }
             }
@@ -312,7 +316,7 @@ namespace Lesson2
         /// 不生成空元素
         /// </summary>
         /// <returns>是否游戏可以继续</returns>
-        public bool AddBottomLine(int lineHeight)
+        public bool AddBottomLine(int lineHeight,Action<bool> onComplete)
         {
             if (lineHeight <= 0)
                 return true;
@@ -338,10 +342,6 @@ namespace Lesson2
                     else
                     {
                         OriginData[toHeight, j] = value;
-                        if (value != 0)
-                        {
-                            CreateBombedMoveCommand(new Vector2Int(j, i), new Vector2Int(j, toHeight));
-                        }
                     }
                 }
             }
@@ -353,11 +353,15 @@ namespace Lesson2
                 {
                     var randVal = -2 /*randomMgr.Next(0, 10000) % 2 == 0 ? GetRandomNodeNum() : randomMgr.Next(-2, 0)*/;
                     OriginData[i, j] = BottomArray[i, j] = randVal;
-
-                    CreateBottomItemCommands(new Vector2Int(j, i), randVal, 0.4f, 0.2f);
                 }
             }
 
+            var bottomGroup = GenerateBottomCommands(lineHeight, 0f, 0f, 0f, 0f);
+            commandMgr.AppendGroup(bottomGroup);
+            
+            UpdateAllNode();
+            
+            commandMgr.Execute(onComplete);
             return OutList.Count == 0;
         }
 
@@ -377,6 +381,7 @@ namespace Lesson2
             OutList.Clear();
             BombList.Clear();
             BombedList.Clear();
+            MoveList.Clear();
             BottomHeight = 0;
         }
 
@@ -403,20 +408,13 @@ namespace Lesson2
             return item;
         }
 
-        public void ExecuteCommands(Action<bool> onFinish, CommandManager.ExecuteMode mode = CommandManager.ExecuteMode.eAtOnce)
-        {
-            CommandManager.Instance.Execute(mode, (_, ifSuccess) => { onFinish?.Invoke(ifSuccess); });
-        }
-
         #endregion
 
         #region 生成命令
-        
-        /// <summary>
-        /// 生成 所有 元素
-        /// </summary>
-        private void CreateLoadCommands()
+
+        private CommandGroup GenerateLoadCommands()
         {
+            var loadGroup = commandMgr.CreateGroup(GroupExecuteMode.eAllAtOnce, "loadGroup");
             for (int i = 0; i < HEIGHT; i++)
             {
                 for (int j = 0; j < WIDTH; j++)
@@ -424,141 +422,237 @@ namespace Lesson2
                     var val = OriginData[i, j];
                     if (val != 0)
                     {
-                        //创建
-                        var createCmd = new CreateCommand(){DropMgr = this, Index = new Vector2Int(j, i),Position = new Vector3(0, 10000, 0) , CreateType = CreateItemType.eLoad, Val = val};
-                        cmdManager.AppendCommand(createCmd);
+                        //create
+                        var createItemCmd = new CreateItemCommand()
+                        {
+                            CreateType = CreateItemType.eLoad,
+                            Index = new Vector2Int(j, i),
+                            Position = new Vector3(0, 10000, 0) , 
+                            Value = val
+                        };
+                        loadGroup.AppendCommand(createItemCmd);
                                 
                         var beginPos = DropItem.GetPositionByIndex(new Vector2Int(j, HEIGHT));
                         var endPos = DropItem.GetPositionByIndex(new Vector2Int(j, i));
 
-                        //移动到初始位置
-                        var moveCmd = new MoveCommand()
+                        //move
+                        var moveItemCmd = new MoveItemCommand()
                         {
-                            DropMgr = this, TargetIndex = new Vector2Int(j, i), BeginPos = beginPos, EndPos = endPos,
-                            ExecuteTime = 0.6f, DelayTime = i * 0.5f + j * 0.03f
+                            Target = createItemCmd.Target,
+                            Direction = MoveItemCommand.MoveDirection.eVertical,
+                            BeginPos = beginPos, 
+                            EndPos = endPos,
+                            FromIndex = null,
+                            ToIndex = null,
+                            ExecuteTime = 0.6f,
+                            DelayTime = i * 0.5f + j * 0.03f
                         };
-                        cmdManager.AppendCommand(moveCmd);
+                        loadGroup.AppendCommand(moveItemCmd);
                     }
                 }
             }
+
+            return loadGroup;
         }
 
-        /// <summary>
-        /// 生成 掉落元素
-        /// </summary>
-        private void CreateDropItemCommands(int randomNum, float executeTime, float delayTime)
+        private CommandGroup GenerateCreateDropCommand(int randomNum, float delayTime, float executeTime)
         {
-            var newItemCmd = new CreateCommand() {CreateType = CreateItemType.eDrop, DropMgr = this, Position = new Vector3(0, DROP_LOCAL_Y, 0),Index = new Vector2Int(-1,-1),Val = randomNum,ExecuteTime = executeTime,DelayTime = delayTime};
-            cmdManager.AppendCommand(newItemCmd);
-        }
-        
-        /// <summary>
-        /// 生成底层元素
-        /// </summary>
-        private void CreateBottomItemCommands(Vector2Int index, int val, float executeTime, float delayTime)
-        {
-            Vector3 pos = DropItem.GetPositionByIndex(index - new Vector2Int(0, 1));
-            var newItemCmd = new CreateCommand()
+            CommandGroup createDropGroup = commandMgr.CreateGroup(GroupExecuteMode.eAfterFinish, "createDropGroup");
+            var newItemCmd = new CreateItemCommand()
             {
-                CreateType = CreateItemType.eBottom, DropMgr = this, Position = pos, Index = index, Val = val,
-                ExecuteTime = 0, DelayTime = 0
+                CreateType = CreateItemType.eDrop,
+                Position = new Vector3(0, DROP_LOCAL_Y, 0),
+                Index = new Vector2Int(-1,-1),
+                Value = randomNum,
+                ExecuteTime = executeTime,
+                DelayTime = delayTime
             };
-            cmdManager.AppendCommand(newItemCmd);
+            createDropGroup.AppendCommand(newItemCmd);
+            return createDropGroup;
+        }
+
+        private CommandGroup GenerateBottomCommands(int lineHeight,float createDelayTime,float createExecuteTime,float moveDelayTime,float moveExecuteTime)
+        {
+            var bottomGroup = commandMgr.CreateGroup(GroupExecuteMode.eAllAtOnce, "bottomGroup");
             
-            var endPos = DropItem.GetPositionByIndex(index);
-            var moveCmd = new MoveCommand()
+            for (int i = HEIGHT-1; i >= 0; i--)
             {
-                DropMgr = this, Target = newItemCmd.Target, BeginPos = pos, EndPos = endPos,
-                ExecuteTime = executeTime, DelayTime = delayTime
-            };
-            cmdManager.AppendCommand(moveCmd);
-        }
+                for (int j = 0; j < WIDTH; j++)
+                {
+                    var value = OriginData[i, j];
+                    if (value == 0)
+                    {
+                        continue;
+                    }
+                    
+                    var index = new Vector2Int(j, i);
+                    
+                    //create
+                    if (i < lineHeight)
+                    {
+                        Vector3 beginPos = DropItem.GetPositionByIndex(index - new Vector2Int(0, 1));
 
-        private void CreateMoveDropItemCommand(int fromIndex, int toIndex)
-        {
-            var curPos = NewItem.transform.localPosition;
-            var endPos = DropItem.GetPositionByIndex(new Vector2Int(toIndex, 0));
-            endPos.y = DROP_LOCAL_Y;
+                        var newItemCmd = new CreateItemCommand()
+                        {
+                            CreateType = CreateItemType.eBottom,
+                            Position = beginPos,
+                            Index = index,
+                            Value = value,
+                            DelayTime = createDelayTime,
+                            ExecuteTime = createExecuteTime,
+                        };
+                        bottomGroup.AppendCommand(newItemCmd);
+
+                        var endPos = DropItem.GetPositionByIndex(index);
+                        var moveCmd = new MoveItemCommand()
+                        {
+                            Target = newItemCmd.Target,
+                            BeginPos = beginPos,
+                            EndPos = endPos,
+                            DelayTime = moveDelayTime,
+                            ExecuteTime = moveExecuteTime,
+                        };
+                        bottomGroup.AppendCommand(moveCmd);
+                    }
+                    //move
+                    else
+                    {
+                        var lastIndex = new Vector2Int(j,i - lineHeight);
+                        var target = GetFromDrop(lastIndex);
+                        var moveCmd = new MoveItemCommand()
+                        {
+                            Target = target,
+                            FromIndex = lastIndex,
+                            ToIndex = index,
+                            DelayTime = moveDelayTime,
+                            ExecuteTime =  moveExecuteTime,
+                        };
+                        
+                        bottomGroup.AppendCommand(moveCmd);
+                    }
+                }
+            }
+
             
-            //移动到初始位置
-            var moveCmd = new MoveCommand()
-            {
-                DropMgr = this, Target = NewItem, BeginPos = curPos, EndPos = endPos,
-                ExecuteTime = 0.2f, DelayTime = 0f, CanBreak = true,
-            };
-            cmdManager.AppendCommand(moveCmd);
+            return bottomGroup;
         }
 
-        private void DropDropItemCommand(Vector2Int targetIndex)
+        private CommandGroup GenerateBombCommands(float bombDelayTime,float bombExecuteTime,float bombedDelayTime,float bombedExecuteTime)
+        {
+            var bombGroup = commandMgr.CreateGroup(GroupExecuteMode.eAllAtOnce, "bombGroup");
+            var bombCount = BombList.Count;
+            var bombedCount = BombedList.Count;
+            for (int i = 0; i < bombCount ; i++)
+            {
+                var item = BombList[i];
+                var bombItemCmd = new BombItemCommand()
+                {
+                    Target = GetFromDrop(item.Position),
+                    DelayTime = bombDelayTime,
+                    ExecuteTime = bombExecuteTime,
+                    NewValue = null,
+                };
+                bombGroup.AppendCommand(bombItemCmd);
+            }
+
+            for (int i = 0; i < bombedCount; i++)
+            {
+                var item = BombedList[i];
+                var bombedItemCmd = new BombItemCommand()
+                {
+                    Target = GetFromDrop(item.Position),
+                    NewValue = item.Value,
+                    ExecuteTime = bombedExecuteTime,
+                    DelayTime = bombedDelayTime,
+                };
+                bombGroup.AppendCommand(bombedItemCmd);
+            }
+            return bombGroup;
+        }
+
+        private CommandGroup GenerateBombMoveCommands(float delayTime, float executeTime)
+        {
+            var bombMoveGroup = commandMgr.CreateGroup(GroupExecuteMode.eAllAtOnce, "bombMoveGroup");
+
+            for (int i = 0; i < MoveList.Count; i++)
+            {
+                var moveData = MoveList[i];
+
+                var target = GetFromDrop(moveData.Item1);
+                var moveCmd = new MoveItemCommand()
+                {
+                    Target = target,
+                    FromIndex = moveData.Item1,
+                    ToIndex = moveData.Item2,
+                    DelayTime = delayTime,
+                    ExecuteTime = executeTime,
+                };
+                
+                bombMoveGroup.AppendCommand(moveCmd);
+            }
+
+            return bombMoveGroup;
+        }
+
+        private CommandGroup GenerateDropItemCommands(Vector2Int targetIndex)
         {
             var curPos = NewItem.transform.localPosition;
             var beginPos = DropItem.GetPositionByIndex(new Vector2Int(targetIndex.x,HEIGHT));
             var endPos = DropItem.GetPositionByIndex(targetIndex);
+
+            var dropGroup = commandMgr.CreateGroup(GroupExecuteMode.eAfterFinish, "dropGroup");
             
             if (Vector3.Distance(curPos, beginPos) > 10f)
             {
-                var moveCmd1 = new MoveCommand()
-                {
-                    DropMgr = this, Target = NewItem, BeginPos = curPos, EndPos = beginPos, 
-                    DelayTime = 0f, ExecuteTime = 0.2f
-                };
-                cmdManager.AppendCommand(moveCmd1);
+                var moveHorizonCmd = GenerateMoveHorizontalCommand(targetIndex.x,0f,0.2f);
+                
+                dropGroup.AppendCommand(moveHorizonCmd);
             }
 
-            var moveCmd2 = new MoveCommand()
+            var dropCmd = new MoveItemCommand()
             {
-                DropMgr = this, Target = NewItem, EndIndex = targetIndex, BeginPos = beginPos, EndPos = endPos, 
-                DelayTime = 0f, ExecuteTime = 0.5f
+                Target = NewItem,
+                BeginPos = beginPos,
+                EndPos = endPos,
+                ToIndex = targetIndex,
+                DelayTime = 0f,
+                ExecuteTime = 0.3f,
             };
-            cmdManager.AppendCommand(moveCmd2);
+            dropGroup.AppendCommand(dropCmd);
+            return dropGroup;
         }
 
-        private void CreateBombCommand(int count)
+        private MoveItemCommand GenerateMoveHorizontalCommand(int targetIndex,float delayTime,float executeTime)
         {
-            Assert.IsTrue(count <= BombList.Count);
-
-            for (int i = BombList.Count - 1; count > 0 ; i--,count--)
-            {
-                var item = BombList[i];
-                var bombCmd = new BombCommand(){DropMgr = this, TargetIndex = item.Position, DelayTime = 0.1f, ExecuteTime = 0.3f};
-                cmdManager.AppendCommand(bombCmd);
-            }
-        }
-
-        private void CreateBombedCommmad(int count)
-        {
-            Assert.IsTrue(count <= BombedList.Count);
-
-            for (int i = BombedList.Count - 1; count > 0 ; i--,count--)
-            {
-                var item = BombedList[i];
-                var bombedCmd = new BombedCommand(){DropMgr = this, TargetIndex = item.Position, NewValue = item.Value,DelayTime = 0.3f, ExecuteTime = 0.3f};
-                cmdManager.AppendCommand(bombedCmd);
-            }
-        }
-
-        private void CreateBombedMoveCommand(Vector2Int lastIndex, Vector2Int newIndex)
-        {
-            var target = GetFromDrop(lastIndex);
-            var bombedMoveCmd = new BombedMoveCommand()
-            {
-                DropMgr = this, Target = target, FromIndex = lastIndex, ToIndex = newIndex, DelayTime = 0.3f,
-                ExecuteTime = 0.2f
-            };
+            var curPos = NewItem.transform.localPosition;
+            var endPos = DropItem.GetPositionByIndex(new Vector2Int(targetIndex, 0));
+            endPos.y = DROP_LOCAL_Y;
             
-            cmdManager.AppendCommand(bombedMoveCmd);
+            var moveCmd = new MoveItemCommand()
+            {
+                Target = NewItem,
+                CanBreak = true,
+                Direction = MoveItemCommand.MoveDirection.eHorizontal,
+                BeginPos = curPos,
+                EndPos = endPos,
+                DelayTime = delayTime,
+                ExecuteTime = executeTime,
+            };
+            return moveCmd;
         }
-
+        
         #endregion
         
         #region 处理命令
 
-        public void PrepareItem(CreateCommand cmd)
+        public void DoAppendCreateItemCommand(CreateItemCommand cmd)
         {
-            var node = CreateNode(cmd.Index, cmd.Val);
+            var node = CreateNode(cmd.Index, cmd.Value);
             var item = CreateItem(node);
             cmd.Target = item;
-            if (cmd.CreateType == CreateItemType.eLoad)
+
+            var createType = cmd.CreateType;
+            if (createType == CreateItemType.eLoad || createType == CreateItemType.eBottom)
             {
                 AddToDrop(cmd.Index, item);
             }
@@ -571,101 +665,25 @@ namespace Lesson2
                 }
                 NewItem = item;
             }
-            else if (cmd.CreateType == CreateItemType.eBottom)
-            {
-                AddToDrop(cmd.Index, item);
-            }
-
         }
 
-        /// <summary>
-        /// 创建 元素节点
-        /// </summary>
-        public void CreateItem(CreateCommand cmd)
+        public void DoExecuteCreateItemCommand(CreateItemCommand cmd)
         {
             var target = cmd.Target;
-            target.gameObject.SetActive(true);
-            
-            //正常加载
-            if (cmd.CreateType == CreateItemType.eLoad)
-            {
-                if (cmd.Position.HasValue)
-                {
-                    target.transform.localPosition = cmd.Position.Value;
-                }
-                
-                target.ExecuteCreate(cmd);
-            }
-            //掉落
-            else if (cmd.CreateType == CreateItemType.eDrop)
-            {
-                if (cmd.Position.HasValue)
-                {
-                    target.transform.localPosition = cmd.Position.Value;
-                }
-                
-                target.ExecuteCreateDrop(cmd);
-            }
-            else if (cmd.CreateType == CreateItemType.eBottom)
-            {
-                if (cmd.Position.HasValue)
-                {
-                    target.transform.localPosition = cmd.Position.Value;
-                }
-                
-                target.ExecuteCreate(cmd);
-            }
+            var createType = cmd.CreateType;
+            target.DoCreateItem(cmd);
         }
 
-        /// <summary>
-        /// 强制设置节点位置
-        /// </summary>
-        public void SetItemPos(SetPositionCommand cmd)
+        public void DoMoveItemCommand(MoveItemCommand cmd)
         {
-            var target = cmd.Target ? cmd.Target : GetFromDrop(cmd.TargetIndex);
-
-            target.transform.localPosition = cmd.Position;
+            cmd.Target.DoMoveItem(cmd);
         }
 
-        /// <summary>
-        /// 移动节点到
-        /// </summary>
-        public void MoveItem(MoveCommand cmd)
+        public void DoBombItemCommand(BombItemCommand cmd)
         {
-            var target = cmd.Target ? cmd.Target : GetFromDrop(cmd.TargetIndex);
-
-//             if (cmd.EndIndex.HasValue)
-//             {
-//                 var lastIndex = target.DropData.Position;
-//                 var newIndex = cmd.EndIndex.Value;
-//
-//                 RemoveInDrop(lastIndex);
-//                 target.DropData.UpdatePosition(newIndex);
-//                 AddToDrop(newIndex, target);
-//                 
-// #if UNITY_EDITOR
-//                 Debug.Log($"MoveItem == Add Node {newIndex}"); 
-// #endif
-//             }
-
-            target.ExecuteMove(cmd);
+            cmd.Target.DoBombItem(cmd);
         }
 
-        
-        /// <summary>
-        /// 移动节点到
-        /// </summary>
-        public void MoveBombedItem(BombedMoveCommand cmd)
-        {
-            var target = cmd.Target ? cmd.Target : GetFromDrop(cmd.TargetIndex);
-            target.ExecuteMove(cmd);
-        }
-        
-        public void BombItem(BombCommand cmd)
-        {
-            cmd.Target.ExecuteBomb(cmd);
-        }
-        
         #endregion
 
         #region 更新 数据信息

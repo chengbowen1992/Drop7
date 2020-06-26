@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace CommandUtil
+namespace Lesson2
 {
     public interface ICommand<T>
     {
@@ -16,10 +17,7 @@ namespace CommandUtil
 
     public abstract class BaseCommand : ICommand<BaseCommand> 
     {
-        public virtual String Description
-        {
-            get { return "BaseCommand"; }
-        }
+        public virtual String Description => "BaseCommand";
 
         private Action<BaseCommand, bool> onCompleteCall;
         
@@ -31,6 +29,7 @@ namespace CommandUtil
         public void Execute(Action<BaseCommand, bool> onComplete)
         {
             onCompleteCall = onComplete;
+            OnExecute();
         }
 
         public virtual void OnExecute()
@@ -61,20 +60,25 @@ namespace CommandUtil
             eFinish
         }
         
-        public int GroupIndex { get; private set; } = -1;
+        public int GroupIndex { get; set; } = -1;
+        public string GroupName { get; set; } = "";
         public Queue<BaseCommand> CmdsTodo = new Queue<BaseCommand>();
         public Queue<BaseCommand> CmdsFinish = new Queue<BaseCommand>();
         public HashSet<BaseCommand> CmdsDoing = new HashSet<BaseCommand>();
 
-        public CommandGroup(GroupExecuteMode mode)
+        public CommandGroup(GroupExecuteMode mode,int index,string name = "")
         {
             SetGroupExecuteMode(mode);
+            GroupIndex = index;
+            GroupName = name;
         }
 
         public GroupExecuteMode ExecuteMode { get; private set; } = GroupExecuteMode.eAllAtOnce;
         
         public GroupExecuteState ExecuteState { get; private set; } = GroupExecuteState.eNone;
 
+        
+        
         public int TotalCount { get; private set; } = 0;
         public int FinishCount => CmdsFinish.Count;
 
@@ -105,22 +109,25 @@ namespace CommandUtil
 
         public void AppendCommand(BaseCommand command)
         {
-            if (ExecuteMode == GroupExecuteMode.eAllAtOnce)
+            if (ExecuteMode == GroupExecuteMode.eNotWait)
             {
-                Debug.LogError($"CommandGroup == NotWaitMode Execute use ExecuteNotWait !!!");
+                Debug.LogError($"CommandGroup == {GroupName} NotWaitMode Execute use ExecuteNotWait !!!");
                 return;
             }
 
+            ExecuteState = GroupExecuteState.eAppending;
+            
             if (ExecuteState == GroupExecuteState.eNone || ExecuteState == GroupExecuteState.eAppending)
             {
 #if UNITY_EDITOR
-                Debug.Log($"CommandGroup == Append {command.Description}");
+                Debug.Log($"CommandGroup == {GroupName} Append {command.Description}");
 #endif
+                command.OnAppend();
                 CmdsTodo.Enqueue(command);
             }
             else
             {
-                Debug.LogError($"CommandGroup == CanNotAppend from State {ExecuteState}");
+                Debug.LogError($"CommandGroup == {GroupName} CanNotAppend from State {ExecuteState}");
             }
 
         }
@@ -128,12 +135,12 @@ namespace CommandUtil
         public void ExecuteGroup(Action<CommandGroup, bool> onComplete, bool ifAutoClear = true)
         {
 #if UNITY_EDITOR
-            Debug.Log($"CommandGroup == ExecuteGroup {ExecuteMode} : Todo {TotalCount} & ifAutoClear {ifAutoClear}");
+            Debug.Log($"CommandGroup == ExecuteGroup {GroupName} {ExecuteMode} : Todo {TotalCount} & ifAutoClear {ifAutoClear}");
 #endif
 
             if (ExecuteMode == GroupExecuteMode.eNotWait)
             {
-                Debug.LogError($"CommandGroup == NotWaitMode Execute use ExecuteNotWait !!!");
+                Debug.LogError($"CommandGroup == {GroupName} NotWaitMode Execute use ExecuteNotWait !!!");
                 return;
             }
 
@@ -200,7 +207,7 @@ namespace CommandUtil
         {
 #if UNITY_EDITOR
             Debug.Log(
-                $"CommandGroup == OnCommandFinish {cmd.Description}  finished:{CmdsFinish.Count + 1}&last:{CmdsDoing.Count - 1}");
+                $"CommandGroup == {GroupName} OnCommandFinish {cmd.Description}  finished:{CmdsFinish.Count + 1}&last:{CmdsDoing.Count - 1}");
 #endif
             if (CmdsDoing.Remove(cmd))
             {
@@ -239,7 +246,7 @@ namespace CommandUtil
         }
     }
 
-    public sealed class CommandManager
+    public sealed class CommandUtil
     {
         public enum ManagerState
         {
@@ -247,22 +254,41 @@ namespace CommandUtil
             eExecuting,
         }
         
-        public static CommandManager Instance = new CommandManager();
-
-        private CommandManager()
+        public static CommandUtil Instance = new CommandUtil();
+        public int IndexCounter = 0;
+        
+        private CommandUtil()
         {
-            DefaultGroup = new CommandGroup(GroupExecuteMode.eNotWait);
+            DefaultGroup = CreateGroup(GroupExecuteMode.eNotWait,"DefaultGroup");
         }
         
         public CommandGroup DefaultGroup;
-        
+
+        private Dictionary<int, CommandGroup> GroupsDictionary = new Dictionary<int, CommandGroup>();
         public Queue<CommandGroup> GroupsTodo = new Queue<CommandGroup>();
         public CommandGroup GroupDoing;
 
         public ManagerState CurrentState { get; private set; }
 
-        private Action<bool> onCompleteCall; 
-        
+        private Action<bool> onCompleteCall;
+
+        public CommandGroup CreateGroup(GroupExecuteMode mode,string name)
+        {
+            //TODO use pool
+            var newGroup = new CommandGroup(mode, IndexCounter, name);
+            IndexCounter++;
+            return newGroup;
+        }
+
+        public void AppendGroup(CommandGroup group)
+        {
+#if UNITY_EDITOR
+            Debug.Log($"CommandUtil == AppendGroup {group.GroupIndex} {group.GroupName}");
+#endif
+            GroupsTodo.Enqueue(group);
+            GroupsDictionary.Add(group.GroupIndex, group);
+        }
+
         public void ExecuteNotWait(BaseCommand command, Action<BaseCommand, bool> onComplete = null)
         {
             DefaultGroup.ExecuteNotWait(command, onComplete);
@@ -287,6 +313,10 @@ namespace CommandUtil
             if (GroupsTodo.Count > 0)
             {
                 GroupDoing = GroupsTodo.Dequeue();
+                GroupsDictionary.Remove(GroupDoing.GroupIndex);
+#if UNITY_EDITOR
+                Debug.Log($"CommandUtil == ExecuteGroup {GroupDoing.GroupIndex} {GroupDoing.GroupName}");
+#endif
                 GroupDoing.ExecuteGroup(OnGroupFinish);
                 return true;
             }
@@ -299,12 +329,18 @@ namespace CommandUtil
             //Complete
             if (GroupsTodo.Count == 0)
             {
+#if UNITY_EDITOR
+                Debug.Log($"CommandUtil == OnGroupFinish All");
+#endif
                 CurrentState = ManagerState.eEmpty;
                 onCompleteCall?.Invoke(true);
                 onCompleteCall = null;
             }
             else
             {
+#if UNITY_EDITOR
+                Debug.Log($"CommandUtil == OnGroupFinish {group.GroupIndex} {group.GroupName}");
+#endif
                 ExecuteAfterOne();
             }
         }

@@ -19,8 +19,6 @@ namespace Lesson2
 
         public PlaygroundManager PlaygroundMgr;
 
-        public DropNodeManager DropManager;
-        
         private bool IfFinish;
 
         private int clickTimes;
@@ -32,12 +30,6 @@ namespace Lesson2
 
             PlaygroundMgr.InitDetectArea();
             PlaygroundMgr.LoadData(testArray);
-            DropManager = PlaygroundMgr.dropManager;
-            PlaygroundMgr.ExecuteCommands(ifSuccess =>
-            {
-                PlaygroundMgr.CreateNewDrop(0.3f, 0);
-                PlaygroundMgr.ExecuteCommands(null);
-            });
         }
         
     }

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Timers;
 using UnityEngine;
 using UnityEngine.UI;
+using Debug = UnityEngine.Debug;
 
 namespace Lesson2
 {
@@ -37,7 +39,7 @@ namespace Lesson2
 
         public bool IfReady => DropState != DropItemState.eCreate;
         
-        private MoveCommand moveCmd;
+        private MoveItemCommand currentMoveCmd;
 
         public void SetData(DropNode data)
         {
@@ -61,94 +63,88 @@ namespace Lesson2
 
         #region 执行操作
 
-        public void ExecuteCreate(CreateCommand cmd)
+        public void DoCreateItem(CreateItemCommand cmd)
         {
-            cmd.OnComplete(true);
+            var position = cmd.Position;
+            var createType = cmd.CreateType;
+            
+            if (position.HasValue)
+            {
+                transform.localPosition = position.Value;
+            }
+            
+            if (createType == CreateItemType.eLoad || cmd.CreateType == CreateItemType.eBottom)
+            {
+                StartCoroutine(PlayCreateItem(cmd));
+            }
+            
+            else if (createType == CreateItemType.eDrop)
+            {
+                StartCoroutine(PlayCreateDropItem(cmd));
+            }
         }
 
-        public void ExecuteMove(MoveCommand cmd)
+        public void DoMoveItem(MoveItemCommand cmd)
         {
-            if (moveCmd != null)
+            if (currentMoveCmd != null)
             {
-                if (!moveCmd.CanBreak)
+                if (!currentMoveCmd.CanBreak)
                 {
                     Debug.LogError("MoveCommandNotFinish");
                 }
 
-                moveCmd.OnComplete(false);
-                moveCmd = null;
+                currentMoveCmd.OnComplete(false);
+                currentMoveCmd = null;
                 ChangeStateTo(DropItemState.eNone);
-                StopAllCoroutines();
+                StopCoroutine(nameof(PlayMoveItem));
             }
             
-            StartCoroutine(PlayMove(cmd));
+            StartCoroutine(nameof(PlayMoveItem),cmd);
         }
 
-        public void ExecuteCreateDrop(CreateCommand cmd)
+        public void DoBombItem(BombItemCommand cmd)
         {
-            StartCoroutine(PlayDropCreate(cmd));
-        }
-
-        public void ExecuteBomb(BombCommand cmd)
-        {
-            StartCoroutine(PlayBomb(cmd));
-        }
-
-        public void ExecuteBombed(BombedCommand cmd)
-        {
-            StartCoroutine(PlayBombed(cmd));
+            if (cmd.NewValue.HasValue)
+            {
+                StartCoroutine(PlayBombedItem(cmd));
+            }
+            else
+            {
+                StartCoroutine(PlayBombItem(cmd));
+            }
         }
 
         #endregion
 
         #region 具体操作
 
-        private IEnumerator PlayMove(MoveCommand cmd)
+        private IEnumerator PlayCreateItem(CreateItemCommand cmd)
         {
-            ChangeStateTo(DropItemState.eMove);
-            moveCmd = cmd;
-
-            if (cmd.DelayTime > 0)
+            ChangeStateTo(DropItemState.eCreate);
+            float delayTime = cmd.DelayTime;
+            
+            if (delayTime > 0)
             {
                 yield return new WaitForSeconds(cmd.DelayTime);
             }
-
-            var timeCounter = 0f;
-            var totalTime = cmd.ExecuteTime;
-            var beginPos = cmd.BeginPos;
-            var endPos = cmd.EndPos;
             
-            if (totalTime > 0)
-            {
-                var moveCurve = cmd.MoveCurve ?? DefaultMoveCurve;
-
-                while (timeCounter <= totalTime)
-                {
-                    var percent = timeCounter / totalTime;
-                    var currentVal = moveCurve?.Evaluate(percent) ?? percent;
-
-                    var targetPos = Vector3.LerpUnclamped(beginPos, endPos, currentVal);
-                    transform.localPosition = targetPos;
-                    
-                    timeCounter += Time.deltaTime;
-                    yield return null;
-                }
-            }
-
-            transform.localPosition = endPos;
-            moveCmd = null;
-            cmd.OnComplete(true);
-            
+            ShowItem(true);
             ChangeStateTo(DropItemState.eNone);
+            cmd.OnComplete(true);
         }
 
-        private IEnumerator PlayDropCreate(CreateCommand cmd)
+        private IEnumerator PlayCreateDropItem(CreateItemCommand cmd)
         {
             ChangeStateTo(DropItemState.eCreate);
+            float delayTime = cmd.DelayTime;
+            
+            if (delayTime > 0)
+            {
+                yield return new WaitForSeconds(cmd.DelayTime);
+            }
+            ShowItem(true);
             transform.localScale = Vector3.zero;
 
-            yield return new WaitForSeconds(cmd.DelayTime);
-            
             var timeCounter = 0f;
             var totalTime = cmd.ExecuteTime;
 
@@ -169,12 +165,53 @@ namespace Lesson2
 
             transform.localScale = Vector3.one;
             ChangeStateTo(DropItemState.eNone);
-            
             cmd.OnComplete(true);
         }
 
-        private IEnumerator PlayBomb(BombCommand cmd)
+        public IEnumerator PlayMoveItem(MoveItemCommand cmd)
         {
+            ChangeStateTo(DropItemState.eMove);
+            currentMoveCmd = cmd;
+            
+            var direction = cmd.Direction;
+
+            if (cmd.DelayTime > 0)
+            {
+                yield return new WaitForSeconds(cmd.DelayTime);
+            }
+
+            var timeCounter = 0f;
+            var totalTime = cmd.ExecuteTime;
+            var beginPos = cmd.BeginPos.Value;
+            var endPos = cmd.EndPos.Value;
+            
+            if (totalTime > 0)
+            {
+                var moveCurve = DefaultMoveCurve;
+
+                while (timeCounter <= totalTime)
+                {
+                    var percent = timeCounter / totalTime;
+                    var currentVal = moveCurve?.Evaluate(percent) ?? percent;
+
+                    var targetPos = Vector3.LerpUnclamped(beginPos, endPos, currentVal);
+                    transform.localPosition = targetPos;
+                    
+                    timeCounter += Time.deltaTime;
+                    yield return null;
+                }
+            }
+
+            transform.localPosition = endPos;
+            currentMoveCmd = null;
+            ChangeStateTo(DropItemState.eNone);
+            cmd.OnComplete(true);
+        }
+        
+        private IEnumerator PlayBombItem(BombItemCommand cmd)
+        {
+            ChangeStateTo(DropItemState.eBomb);
+            
             yield return new WaitForSeconds(cmd.DelayTime);
 
             float totalTime = cmd.ExecuteTime;
@@ -196,14 +233,17 @@ namespace Lesson2
                 }
             }
 
+            ChangeStateTo(DropItemState.eNone);
             cmd.OnComplete(true);
             Destroy(this.gameObject);
         }
-
-        private IEnumerator PlayBombed(BombedCommand cmd)
+        
+        private IEnumerator PlayBombedItem(BombItemCommand cmd)
         {
+            ChangeStateTo(DropItemState.eBombed);
+            
             yield return new WaitForSeconds(cmd.DelayTime);
-            DropData.UpdateVal(cmd.NewValue);
+            DropData.UpdateVal(cmd.NewValue.Value);
             LastVal = DropData.Value;
             
             float totalTime = cmd.ExecuteTime;
@@ -223,16 +263,24 @@ namespace Lesson2
             
             //TODO 用Atlas
             DropImage.sprite = Resources.Load<Sprite>($"Common/Images/{LastVal.ToString().Replace("-", "_")}");
-
+            ChangeStateTo(DropItemState.eNone);
             cmd.OnComplete(true);
         }
-
+        
         #endregion
 
         private void ChangeStateTo(DropItemState state)
         {
-            //TODO Check and alert
-            
+            if (DropState == state)
+            {
+                return;
+            }
+
+            if (state != DropItemState.eNone && DropState != DropItemState.eNone)
+            {
+                Debug.LogError($"ChangeState is Not Allowed {state} => {DropState}");
+            }
+
             DropState = state;
         }
 
@@ -241,6 +289,11 @@ namespace Lesson2
             int y = (index.y - DropNodeManager.CENTER_Y) * DropNodeManager.CELL_SIZE;
             int x = (index.x - DropNodeManager.CENTER_X) * DropNodeManager.CELL_SIZE;
             return new Vector3(x, y, 0);
+        }
+
+        public void ShowItem(bool ifShow)
+        {
+            gameObject.SetActive(ifShow);
         }
     }
 }
