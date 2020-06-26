@@ -333,8 +333,9 @@ namespace Lesson2
                 Debug.Log($"CommandUtil == OnGroupFinish All");
 #endif
                 CurrentState = ManagerState.eEmpty;
-                onCompleteCall?.Invoke(true);
+                var lastCompleteCall = onCompleteCall;
                 onCompleteCall = null;
+                lastCompleteCall?.Invoke(true);
             }
             else
             {

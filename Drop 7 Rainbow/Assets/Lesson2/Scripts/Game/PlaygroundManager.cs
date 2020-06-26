@@ -9,7 +9,7 @@ namespace Lesson2
     public class PlaygroundManager : MonoBehaviour
     {
         public static readonly int DefaultIndexX = 3;
-        public static readonly int OneTurnCount = 3;
+        public static readonly int OneTurnCount = 10;
         public Canvas Scaler;
         public Transform DropRoot;
         public DropItem CopyOne;
