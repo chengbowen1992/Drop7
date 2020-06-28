@@ -67,10 +67,8 @@ namespace Lesson2
 
         //--6.添加新的一行
         //--7.循环 3-5 至没有新的爆炸点为止
-
-        /// <summary>
-        /// 加载初始信息
-        /// </summary>
+        
+        // 加载初始信息
         public void LoadData(int[,] data, Action<bool> onFinish)
         {
             Assert.IsNotNull(data);
@@ -107,10 +105,8 @@ namespace Lesson2
             commandMgr.AppendGroup(loadGroup);
             commandMgr.Execute(onFinish);
         }
-
-        /// <summary>
-        /// 产生掉落元素 
-        /// </summary>
+        
+        // 产生掉落元素 
         public void CreateDropItem(float executeTime ,float delayTime,Action<bool> onComplete)
         {
             int randomNum = 0;
@@ -124,6 +120,7 @@ namespace Lesson2
             commandMgr.Execute(onComplete);
         }
 
+        // 横向移动掉落物
         public void MoveDropItem(int fromIndex, int toIndex)
         {
             if (fromIndex != toIndex)
@@ -133,7 +130,8 @@ namespace Lesson2
             }
         }
 
-        public void DropDropItem(int index,Action<bool> onComplete)
+        // 选择掉落掉落物
+        public bool DropDropItem(int index,Action<bool> onComplete)
         {
             if (CanDropNode(index))
             {
@@ -144,22 +142,19 @@ namespace Lesson2
                 UpdateAllNode();
                 NewItem = null;
                 commandMgr.Execute(onComplete);
+                return true;
             }
-        }
 
-        /// <summary>
-        /// 判断可否在 第 x 列 掉落
-        /// </summary>
+            return false;
+        }
+        
+        // 判断可否在 第 x 列 掉落
         public bool CanDropNode(int x)
         {
             return OriginData[HEIGHT - 1, x] == 0;
         }
-
-        /// <summary>
-        /// 在 第x列 掉落值val
-        /// val 不为 0
-        /// </summary>
-        /// <returns>掉落到达的位置</returns>
+        
+        // 在 第x列 掉落值val
         public Vector2Int TryDropNode(int x, int val)
         {
             Vector2Int pos = Vector2Int.zero;
@@ -176,10 +171,8 @@ namespace Lesson2
 
             return pos;
         }
-
-        /// <summary>
-        /// 掉落后的更新
-        /// </summary>
+        
+        // 全部节点更新
         public void UpdateAllNode()
         {
             int bombAll = 0;
@@ -255,10 +248,7 @@ namespace Lesson2
             }
         }
 
-        /// <summary>
-        /// 根据爆炸 执行 下行
-        /// TODO 优化
-        /// </summary>
+        // 根据爆炸 执行 下行
         private void DealWitMove()
         {
             //处理移动列表
@@ -311,11 +301,8 @@ namespace Lesson2
             }
         }
 
-        /// <summary>
-        /// 从底部生成指定行数目
-        /// 不生成空元素
-        /// </summary>
-        /// <returns>是否游戏可以继续</returns>
+        // 从底部生成指定行数目
+        // 不生成空元素
         public bool AddBottomLine(int lineHeight,Action<bool> onComplete)
         {
             if (lineHeight <= 0)
@@ -364,10 +351,8 @@ namespace Lesson2
             commandMgr.Execute(onComplete);
             return OutList.Count == 0;
         }
-
-        /// <summary>
-        /// 清理临时计算的 爆炸 移动 数组 以及 爆炸列表
-        /// </summary>
+        
+        // 清理临时计算的 爆炸 移动 数组 以及 爆炸列表
         private void ClearMap()
         {
             for (int i = 0; i < HEIGHT; i++)
@@ -532,7 +517,6 @@ namespace Lesson2
                     }
                 }
             }
-
             
             return bottomGroup;
         }
@@ -687,10 +671,8 @@ namespace Lesson2
         #endregion
 
         #region 更新 数据信息
-
-        /// <summary>
-        /// 更新所有 行 统计信息
-        /// </summary>
+        
+        // 更新所有 行 统计信息
         private void UpdateHorizonAll()
         {
             for (int i = 0; i < HEIGHT; i++)
@@ -698,10 +680,8 @@ namespace Lesson2
                 UpdateHorizonByRow(i);
             }
         }
-
-        /// <summary>
-        /// 更新所有 列 统计信息
-        /// </summary>
+        
+        // 更新所有 列 统计信息
         private void UpdateVerticalAll()
         {
             for (int i = 0; i < WIDTH; i++)
@@ -778,13 +758,10 @@ namespace Lesson2
                 VerticalMap[i, col] = countY < 0 ? 0 : countY;
             }
         }
-
-        /// <summary>
-        /// 更新所有 爆炸 信息
-        /// 0 正常 -1 消失 1-n 爆炸值
-        /// TODO 优化
-        /// 可以通过 DropDictionary 优化
-        /// </summary>
+        
+        // 更新所有 爆炸 信息
+        //== 0 正常 -1 消失 1-n 爆炸值
+        //TODO: 可以通过 DropDictionary 优化
         private int UpdateBombAll()
         {
             int bombCount = 0;

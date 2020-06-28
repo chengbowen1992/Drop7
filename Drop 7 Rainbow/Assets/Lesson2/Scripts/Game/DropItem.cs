@@ -202,6 +202,11 @@ namespace Lesson2
                 }
             }
 
+            if (direction == MoveItemCommand.MoveDirection.eVertical)
+            {
+                SoundManager.Instance.PlaySound(SoundNames.Sound_Drop);
+            }
+
             transform.localPosition = endPos;
             currentMoveCmd = null;
             ChangeStateTo(DropItemState.eNone);
@@ -217,6 +222,8 @@ namespace Lesson2
             float totalTime = cmd.ExecuteTime;
             var timeCounter = 0f;
 
+            SoundManager.Instance.PlaySound(SoundNames.Sound_Bomb);
+            
             if (totalTime > 0)
             {
                 while (timeCounter <= totalTime)

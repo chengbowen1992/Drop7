@@ -10,7 +10,12 @@ namespace Lesson2
     {
         public static readonly int DefaultIndexX = 3;
         public static readonly int OneTurnCount = 10;
+        
         public Canvas Scaler;
+
+        public AudioSource MusicPlayer;
+        public AudioSource SoundPlayer;
+        
         public Transform DropRoot;
         public DropItem CopyOne;
     
@@ -22,10 +27,20 @@ namespace Lesson2
         public int SelectIndex = DefaultIndexX;
 
         public int DropCount = 0;
+
+        //初始化音乐管理器
+        public void InitSoundManager()
+        {
+            SoundManager.Instance.Init(MusicPlayer, SoundPlayer);
+        }
+
+        //播放背景音乐
+        public void StartPlayMusic()
+        {
+            SoundManager.Instance.PlayMusic(SoundNames.Music_GameBg);
+        }
         
-        /// <summary>
-        /// 创建 输入检测区域
-        /// </summary>
+        // 创建 输入检测区域
         public void InitDetectArea()
         {
             int total = DropNodeManager.WIDTH;
@@ -45,9 +60,7 @@ namespace Lesson2
             }
         }
 
-        /// <summary>
-        /// 加载关卡
-        /// </summary>
+        // 加载关卡
         public void LoadData(int[,] dataArray)
         {
             commandMgr = CommandUtil.Instance;
@@ -60,17 +73,14 @@ namespace Lesson2
             DropCount = 0;
         }
 
-        /// <summary>
-        /// 创建掉落物
-        /// </summary>
+        // 创建掉落物
         public void CreateNewDrop(Action<bool> onComplete, float executeTime = 1f, float delayTime = 0)
         {
             SelectIndex = DefaultIndexX;
             dropManager.CreateDropItem(executeTime, delayTime, onComplete);
         }
-
-        #region 调试
-
+        
+        //游戏循环
         private void Update()
         {
             int count = detectRects?.Length ?? 0;
@@ -117,6 +127,7 @@ namespace Lesson2
             }
         }
 
+        #region 调试
         private void OnDrawGizmos()
         {
             bool haveInput = Input.GetMouseButton(0);

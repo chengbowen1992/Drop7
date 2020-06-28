@@ -18,19 +18,13 @@ namespace Lesson2
         };
 
         public PlaygroundManager PlaygroundMgr;
-
-        private bool IfFinish;
-
-        private int clickTimes;
         
         void Start()
         {
-            IfFinish = false;
-            clickTimes = 0;
-
+            PlaygroundMgr.InitSoundManager();
+            PlaygroundMgr.StartPlayMusic();
             PlaygroundMgr.InitDetectArea();
             PlaygroundMgr.LoadData(testArray);
         }
-        
     }
 }
