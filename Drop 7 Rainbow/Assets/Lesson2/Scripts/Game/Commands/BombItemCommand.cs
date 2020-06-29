@@ -8,6 +8,7 @@ namespace Lesson2
     public sealed class BombItemCommand : BaseGameCommand
     {
         public int? NewValue;
+        public int ScoreValue;
 
         public override void OnAppend()
         {

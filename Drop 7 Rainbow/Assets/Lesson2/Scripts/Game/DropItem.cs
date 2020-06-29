@@ -21,7 +21,8 @@ namespace Lesson2
         }
 
         public Image DropImage;
-    
+        public Text BombText;
+        
         public DropNode DropData;
 
         public AnimationCurve DefaultScaleCurveX;
@@ -32,6 +33,7 @@ namespace Lesson2
         public AnimationCurve DefaultBombScaleCurve;
         public AnimationCurve DefaultBombAlphaCurve;
         public AnimationCurve DefaultBombedScaleCurve;
+        public Animation BombTextAnimation;
         
         public int LastVal = 0;
 
@@ -216,6 +218,9 @@ namespace Lesson2
         private IEnumerator PlayBombItem(BombItemCommand cmd)
         {
             ChangeStateTo(DropItemState.eBomb);
+
+            BombText.text = $"+{cmd.ScoreValue}";
+            BombTextAnimation.Play();
             
             yield return new WaitForSeconds(cmd.DelayTime);
 

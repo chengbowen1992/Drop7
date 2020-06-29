@@ -21,7 +21,7 @@ namespace Lesson2
         public static readonly int CENTER_X = 3;
         public static readonly int CELL_SIZE = 100;
         public static readonly float DROP_LOCAL_Y = (HEIGHT + 1) * CELL_SIZE * 0.5f;
-        
+
         public int[,] OriginData = new int[HEIGHT, WIDTH]; //原始数据
         public int[,] HorizonMap = new int[HEIGHT, WIDTH]; //行 统计
         public int[,] VerticalMap = new int[HEIGHT, WIDTH]; //列 统计
@@ -230,7 +230,10 @@ namespace Lesson2
                     totalBomb += bombCount;
                     int bombedCount, showCount;
                     DealWithBombInternal(out bombedCount, out showCount,OriginData);
-                    DealWithBombCommand();
+
+                    var score = bombTurn == 1 ? 7 : 49 * (int)Mathf.Pow(2, bombTurn - 2); 
+                    
+                    DealWithBombCommand(score);
 
                     DealWitMoveInternal(OriginData);
                     DealWithMoveCommand();
@@ -313,9 +316,9 @@ namespace Lesson2
             }
         }
 
-        private void DealWithBombCommand()
+        private void DealWithBombCommand(int score)
         {
-            var bombGroup = GenerateBombCommands(0.1f,0.3f,0.2f,0.3f);
+            var bombGroup = GenerateBombCommands(score,0.1f,0.3f,0.2f,0.3f);
             commandMgr.AppendGroup(bombGroup);
         }
 
@@ -611,7 +614,7 @@ namespace Lesson2
             return bottomGroup;
         }
 
-        private CommandGroup GenerateBombCommands(float bombDelayTime,float bombExecuteTime,float bombedDelayTime,float bombedExecuteTime)
+        private CommandGroup GenerateBombCommands(int score,float bombDelayTime,float bombExecuteTime,float bombedDelayTime,float bombedExecuteTime)
         {
             var bombGroup = commandMgr.CreateGroup(GroupExecuteMode.eAllAtOnce, "bombGroup");
             var bombCount = BombList.Count;
@@ -625,6 +628,7 @@ namespace Lesson2
                     DelayTime = bombDelayTime,
                     ExecuteTime = bombExecuteTime,
                     NewValue = null,
+                    ScoreValue = score,
                 };
                 bombGroup.AppendCommand(bombItemCmd);
             }

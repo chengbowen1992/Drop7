@@ -82,14 +82,14 @@ namespace Lesson2
             levelCreator = LevelCreatorBase.Instance;
             levelCreator.DropMgr = dropManager;
 
-            WeightRandom levelRandom = new WeightRandom(randomMgr, "10:1|20:2|20:3|20:4|20:5|20:6|15:7|15:-1|15:-2");
+            WeightRandom levelRandom = new WeightRandom(randomMgr, "10:1|20:2|20:3|20:4|20:5|20:6|15:7|20:-1|20:-2");
             levelCreator.LevelRandom = levelRandom;
             WeightRandom bombRandom = new WeightRandom(randomMgr, "10:1|20:2|20:3|20:4|20:5|20:6|15:7");
             levelCreator.BombRandom = bombRandom;
             
             dropManager.levelCreator = levelCreator;
             
-            WeightRandom createRandom = new WeightRandom(randomMgr, "20:2|30:3|20:4|15:5|5:6|5:7|2:1|15:-1|10:-2");
+            WeightRandom createRandom = new WeightRandom(randomMgr, "20:2|30:3|20:4|15:5|5:6|5:7|2:1|10:-1|15:-2");
             var dataArray = levelCreator.CreateLevel(DropNodeManager.WIDTH, DropNodeManager.HEIGHT, 21, createRandom);
             dropManager.LoadData(dataArray, _ =>
             {
