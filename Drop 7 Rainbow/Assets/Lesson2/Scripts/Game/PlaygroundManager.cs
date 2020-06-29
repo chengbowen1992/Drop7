@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using Random = System.Random;
 
 namespace Lesson2
 {
@@ -18,10 +19,12 @@ namespace Lesson2
         
         public Transform DropRoot;
         public DropItem CopyOne;
-    
+
+        public Random randomMgr;
         public DropNodeManager dropManager;
         public CommandUtil commandMgr;
-        
+        public LevelCreatorBase levelCreator;
+
         private DropItem NewItem => dropManager.NewItem;
         private Rect[] detectRects;
         public int SelectIndex = DefaultIndexX;
@@ -61,16 +64,30 @@ namespace Lesson2
         }
 
         // 加载关卡
-        public void LoadData(int[,] dataArray)
+        public void InitLevel()
         {
+            randomMgr = new Random(DateTime.Now.Millisecond);
             commandMgr = CommandUtil.Instance;
             dropManager = new DropNodeManager {DropItemOne = CopyOne, DropRoot = DropRoot};
             BaseGameCommand.DropMgr = dropManager;
+            levelCreator = LevelCreatorBase.Instance;
+            levelCreator.DropMgr = dropManager;
+
+            WeightRandom levelRandom = new WeightRandom(randomMgr, "10:1|20:2|20:3|20:4|20:5|20:6|15:7|15:-1|15:-2");
+            levelCreator.LevelRandom = levelRandom;
+            WeightRandom bombRandom = new WeightRandom(randomMgr, "10:1|20:2|20:3|20:4|20:5|20:6|15:7");
+            levelCreator.BombRandom = bombRandom;
+            
+            dropManager.levelCreator = levelCreator;
+            
+            WeightRandom createRandom = new WeightRandom(randomMgr, "20:2|30:3|20:4|15:5|5:6|5:7|2:1|15:-1|10:-2");
+            var dataArray = levelCreator.CreateLevel(DropNodeManager.WIDTH, DropNodeManager.HEIGHT, 21, createRandom);
             dropManager.LoadData(dataArray, _ =>
             {
                 CreateNewDrop(null,0.3f, 0);
             });
             DropCount = 0;
+
         }
 
         // 创建掉落物

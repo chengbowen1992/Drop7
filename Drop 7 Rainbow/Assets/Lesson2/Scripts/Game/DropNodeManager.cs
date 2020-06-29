@@ -43,7 +43,7 @@ namespace Lesson2
         public Transform DropRoot;
         public DropItem DropItemOne;
 
-        private Random randomMgr;
+        public LevelCreatorBase levelCreator;
         private CommandUtil commandMgr;
 
         private int dropHorizonIndex = WIDTH / 2;
@@ -74,7 +74,6 @@ namespace Lesson2
         // 加载初始信息
         public void LoadData(int[,] data, Action<bool> onFinish)
         {
-            randomMgr = new Random(DateTime.Now.Millisecond);
             commandMgr = CommandUtil.Instance;
             
             LoadDataInternal(data);
@@ -87,31 +86,18 @@ namespace Lesson2
             Assert.IsTrue(data.GetLength(0) == HEIGHT);
             Assert.IsTrue(data.GetLength(1) == WIDTH);
             
-            BombList.Clear();
-            BombedList.Clear();
-            OutList.Clear();
-
             dropValue = null;
             dropHorizonIndex = WIDTH / 2;
             
+            ClearMap();
+            
             OriginData = data;
-            BottomHeight = 0;
-
-            for (int i = 0; i < HEIGHT; i++)
-            {
-                for (int j = 0; j < WIDTH; j++)
-                {
-                    //初始化 移动 Map
-                    //初始化 爆炸 Map
-                    HorizonMap[i, j] = VerticalMap[i, j] = MoveMap[i, j] = BombMap[i, j] = BottomArray[i, j] = 0;
-                }
-            }
 
             //初始化 列 计数信息
-            UpdateVerticalAll();
+            UpdateVerticalAll(OriginData);
 
             //初始化 行 计数信息
-            UpdateHorizonAll();
+            UpdateHorizonAll(OriginData);
         }
 
         private void LoadDataCommand(Action<bool> onFinish)
@@ -130,11 +116,7 @@ namespace Lesson2
 
         private int CreateDropItemInternal()
         {
-            int randomNum = 0;
-            while (randomNum == 0)
-            {
-                randomNum = randomMgr.Next(-2, DropNodeManager.WIDTH);
-            }
+            int randomNum = GetLevelNodeNum();
 
             dropHorizonIndex = WIDTH / 2;
             dropValue = randomNum;
@@ -182,9 +164,9 @@ namespace Lesson2
         // 选择掉落掉落物
         public bool DropDropItem(int index,Action<bool> onComplete)
         {
-            if (CanDropNode(index) && dropValue.HasValue)
+            if (CanDropNode(index, OriginData) && dropValue.HasValue)
             {
-                var targetIndex = DropDropItemInternal(index, dropValue.Value);
+                var targetIndex = DropDropItemInternal(index, dropValue.Value, OriginData);
                 DropDropItemCommand(targetIndex, onComplete);
                 return true;
             }
@@ -193,15 +175,15 @@ namespace Lesson2
         }
 
         // 在 第index列 掉落值val
-        private Vector2Int DropDropItemInternal(int index,int val)
+        private Vector2Int DropDropItemInternal(int index,int val,int[,] data)
         {
             Vector2Int pos = Vector2Int.zero;
             for (int i = 0; i < HEIGHT; i++)
             {
-                var item = OriginData[i, index];
+                var item = data[i, index];
                 if (item == 0)
                 {
-                    OriginData[i, index] = val;
+                    data[i, index] = val;
                     pos = new Vector2Int(index, i);
                     break;
                 }
@@ -223,9 +205,9 @@ namespace Lesson2
         }
 
         // 判断可否在 第 x 列 掉落
-        private bool CanDropNode(int x)
+        private bool CanDropNode(int x,int[,] data)
         {
-            return OriginData[HEIGHT - 1, x] == 0;
+            return data[HEIGHT - 1, x] == 0;
         }
         
         // 全部节点更新
@@ -236,25 +218,52 @@ namespace Lesson2
             do
             {
                 ClearMap();
-                UpdateHorizonAll();
-                UpdateVerticalAll();
+                UpdateHorizonAll(OriginData);
+                UpdateVerticalAll(OriginData);
                 
-                bombCount = UpdateBombInternal(); //可以优化
+                bombCount = UpdateBombInternal(OriginData); //可以优化
                 
                 if (bombCount > 0)
                 {
                     totalBomb += bombCount;
                     int bombedCount, showCount;
-                    DealWithBombInternal(out bombedCount, out showCount);
+                    DealWithBombInternal(out bombedCount, out showCount,OriginData);
                     DealWithBombCommand();
 
-                    DealWitMoveInternal();
+                    DealWitMoveInternal(OriginData);
                     DealWithMoveCommand();
                 }
 
             } while (bombCount > 0);
 
             return totalBomb;
+        }
+
+        public void NormalizeData(int[,] data)
+        {
+            Assert.IsNotNull(data);
+            Assert.IsTrue(data.GetLength(0) == HEIGHT);
+            Assert.IsTrue(data.GetLength(1) == WIDTH);
+            
+            int totalBomb = 0;
+            int bombCount = 0;
+            do
+            {
+                ClearMap();
+                UpdateHorizonAll(data);
+                UpdateVerticalAll(data);
+                bombCount = UpdateBombInternal(data); //可以优化
+                if (bombCount > 0)
+                {
+                    totalBomb += bombCount;
+                    int bombedCount, showCount;
+                    DealWithBombInternal(out bombedCount, out showCount,data);
+                    DealWitMoveInternal(data);
+                }
+
+            } while (bombCount > 0);
+
+            ClearMap();
         }
 
         /// <summary>
@@ -264,7 +273,7 @@ namespace Lesson2
         /// </summary>
         /// <param name="bombCount">爆炸次数</param>
         /// <param name="showCount">显现个数</param>
-        private void DealWithBombInternal(out int bombCount, out int showCount)
+        private void DealWithBombInternal(out int bombCount, out int showCount,int[,] data)
         {
             bombCount = showCount = 0;
             //处理 隐藏元素
@@ -272,7 +281,7 @@ namespace Lesson2
             {
                 for (int j = 0; j < WIDTH; j++)
                 {
-                    var val = OriginData[i, j];
+                    var val = data[i, j];
                     var bombVal = BombMap[i, j];
 
                     //隐藏 且 爆炸波及
@@ -290,11 +299,11 @@ namespace Lesson2
                         //爆炸解锁，需要随机获得新数字
                         else if (add >= 0)
                         {
-                            newVal = GetRandomNodeNum();
+                            newVal = GetBombNodeNum();
                             showCount++;
                         }
 
-                        OriginData[i, j] = newVal;
+                        data[i, j] = newVal;
                         bombCount++;
                         BombedList.Add(CreateNode(new Vector2Int(j, i), newVal));
                     }
@@ -309,7 +318,7 @@ namespace Lesson2
         }
 
         // 根据爆炸 执行 下行
-        private void DealWitMoveInternal()
+        private void DealWitMoveInternal(int[,] data)
         {
             //处理移动列表
             for (int j = 0; j < WIDTH; j++)
@@ -321,11 +330,11 @@ namespace Lesson2
                     if (BombMap[i, j] < 0)
                     {
                         //删除 爆炸 点
-                        OriginData[i, j] = 0;
+                        data[i, j] = 0;
                         moveCount--;
                     }
 
-                    if (OriginData[i, j] != 0)
+                    if (data[i, j] != 0)
                     {
                         MoveMap[i, j] = moveCount;
                     }
@@ -341,19 +350,19 @@ namespace Lesson2
                 for (int i = 0; i < HEIGHT; i++)
                 {
                     var moveCount = MoveMap[i, j];
-                    var originVal = OriginData[i, j];
+                    var originVal = data[i, j];
                     if (moveCount < 0 && originVal != 0)
                     {
                         var newRow = moveCount + i;
-                        if (OriginData[newRow, j] != 0)
+                        if (data[newRow, j] != 0)
                         {
-                            Debug.LogError($"[{j},{newRow}] == {OriginData[newRow, j]}!!!");
+                            Debug.LogError($"[{j},{newRow}] == {data[newRow, j]}!!!");
                         }
 
                         var pos = new Vector2Int(j, i);
                         var newPos = new Vector2Int(j, newRow);
-                        OriginData[newRow, j] = OriginData[i, j];
-                        OriginData[i, j] = 0;
+                        data[newRow, j] = data[i, j];
+                        data[i, j] = 0;
 
                         MoveList.Add(ValueTuple.Create(pos, newPos));
                     }
@@ -374,14 +383,14 @@ namespace Lesson2
             if (lineHeight <= 0)
                 return true;
 
-            AddBottomLineInternal(lineHeight);
+            AddBottomLineInternal(lineHeight, OriginData);
             AddBottomLineCommand(lineHeight, onComplete);
 
             //TODO deal with Game Fail
             return OutList.Count == 0;
         }
 
-        private void AddBottomLineInternal(int lineHeight)
+        private void AddBottomLineInternal(int lineHeight,int[,] data)
         {
             ClearMap();
 
@@ -390,19 +399,19 @@ namespace Lesson2
                 for (int j = 0; j < WIDTH; j++)
                 {
                     var toHeight = i + lineHeight;
-                    var value = OriginData[i, j];
+                    var value = data[i, j];
 
                     if (toHeight >= HEIGHT)
                     {
                         if (value != 0)
                         {
-                            var outNode = CreateNode(new Vector2Int(j, toHeight), OriginData[i, j]);
+                            var outNode = CreateNode(new Vector2Int(j, toHeight), data[i, j]);
                             OutList.Add(outNode);
                         }
                     }
                     else
                     {
-                        OriginData[toHeight, j] = value;
+                        data[toHeight, j] = value;
                     }
                 }
             }
@@ -412,8 +421,8 @@ namespace Lesson2
             {
                 for (int j = 0; j < WIDTH; j++)
                 {
-                    var randVal = -2 /*randomMgr.Next(0, 10000) % 2 == 0 ? GetRandomNodeNum() : randomMgr.Next(-2, 0)*/;
-                    OriginData[i, j] = BottomArray[i, j] = randVal;
+                    var randVal = -2;
+                    data[i, j] = BottomArray[i, j] = randVal;
                 }
             }
         }
@@ -433,7 +442,7 @@ namespace Lesson2
             {
                 for (int j = 0; j < WIDTH; j++)
                 {
-                    BombMap[i, j] = MoveMap[i, j] = BottomArray[i, j] = 0;
+                    HorizonMap[i, j] = VerticalMap[i, j] = BombMap[i, j] = MoveMap[i, j] = BottomArray[i, j] = 0;
                 }
             }
 
@@ -444,9 +453,14 @@ namespace Lesson2
             BottomHeight = 0;
         }
 
-        private int GetRandomNodeNum()
+        private int GetLevelNodeNum()
         {
-            return randomMgr.Next(1, MAX_NUM + 1);
+            return levelCreator.GetLevelItem();
+        }
+
+        private int GetBombNodeNum()
+        {
+            return levelCreator.GetBombItem();
         }
 
         private DropNode CreateNode(Vector2Int pos, int val)
@@ -747,29 +761,28 @@ namespace Lesson2
         #region 更新 数据信息
         
         // 更新所有 行 统计信息
-        private void UpdateHorizonAll()
+        private void UpdateHorizonAll(int[,] data)
         {
             for (int i = 0; i < HEIGHT; i++)
             {
-                UpdateHorizonByRow(i);
+                UpdateHorizonByRow(i,data);
             }
         }
         
         // 更新所有 列 统计信息
-        private void UpdateVerticalAll()
+        private void UpdateVerticalAll(int[,] data)
         {
             for (int i = 0; i < WIDTH; i++)
             {
-                UpdateVerticalByCol(i);
+                UpdateVerticalByCol(i, data);
             }
         }
 
         /// <summary>
         /// 更新 第 row 行 统计信息
         /// </summary>
-        private void UpdateHorizonByRow(int row)
+        private void UpdateHorizonByRow(int row, int[,] data)
         {
-            var data = OriginData;
             int begin, len;
             begin = len = -1;
 
@@ -818,9 +831,8 @@ namespace Lesson2
         /// <summary>
         /// 更新 第 col 列 统计信息
         /// </summary>
-        private void UpdateVerticalByCol(int col)
+        private void UpdateVerticalByCol(int col, int[,] data)
         {
-            var data = OriginData;
             int countY = -1;
             for (int i = HEIGHT - 1; i >= 0; i--)
             {
@@ -836,10 +848,9 @@ namespace Lesson2
         // 更新所有 爆炸 信息
         //== 0 正常 -1 消失 1-n 爆炸值
         //TODO: 可以通过 DropDictionary 优化
-        private int UpdateBombInternal()
+        private int UpdateBombInternal(int[,] data)
         {
             int bombCount = 0;
-            var data = OriginData;
             Action<int, int> bombItem = (row, col) =>
             {
                 if (BombMap[row, col] != -1)
