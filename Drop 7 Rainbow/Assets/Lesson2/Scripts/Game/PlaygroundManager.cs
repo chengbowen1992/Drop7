@@ -10,8 +10,9 @@ namespace Lesson2
     public class PlaygroundManager : MonoBehaviour
     {
         public static readonly int DefaultIndexX = 3;
-        public static readonly int OneTurnCount = 10;
-        
+        public static readonly int MaxTurnCount = 30;
+        public static readonly int MinTuneCount = 5;
+
         public Canvas Scaler;
 
         public AudioSource MusicPlayer;
@@ -20,11 +21,13 @@ namespace Lesson2
         public Transform DropRoot;
         public DropItem CopyOne;
 
+        public LevelTitleManager titleManager;
+
         public Random randomMgr;
         public DropNodeManager dropManager;
         public CommandUtil commandMgr;
         public LevelCreatorBase levelCreator;
-
+        
         private DropItem NewItem => dropManager.NewItem;
         private Rect[] detectRects;
         public int SelectIndex = DefaultIndexX;
@@ -42,7 +45,13 @@ namespace Lesson2
         {
             SoundManager.Instance.PlayMusic(SoundNames.Music_GameBg);
         }
-        
+
+        // 初始化 标题 UI
+        public void InitTitle()
+        {
+            titleManager.CreateTitle(MaxTurnCount, MinTuneCount);
+        }
+
         // 创建 输入检测区域
         public void InitDetectArea()
         {
@@ -84,6 +93,7 @@ namespace Lesson2
             var dataArray = levelCreator.CreateLevel(DropNodeManager.WIDTH, DropNodeManager.HEIGHT, 21, createRandom);
             dropManager.LoadData(dataArray, _ =>
             {
+                titleManager.AutoUpdateShow();
                 CreateNewDrop(null,0.3f, 0);
             });
             DropCount = 0;
@@ -113,7 +123,7 @@ namespace Lesson2
                         {
                             dropManager.DropDropItem(i, onDropComplete =>
                             {
-                                if (DropCount % OneTurnCount == 0)
+                                if (titleManager.AutoUpdateShow())
                                 {
                                     dropManager.AddBottomLine(1 ,onAddLineComplete=>
                                     {

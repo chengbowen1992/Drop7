@@ -11,6 +11,7 @@ namespace Lesson2
         {
             PlaygroundMgr.InitSoundManager();
             PlaygroundMgr.StartPlayMusic();
+            PlaygroundMgr.InitTitle();
             PlaygroundMgr.InitDetectArea();
             PlaygroundMgr.InitLevel();
         }

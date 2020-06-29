@@ -215,6 +215,7 @@ namespace Lesson2
         {
             int bombCount = 0;
             int totalBomb = 0;
+            int bombTurn = 0;
             do
             {
                 ClearMap();
@@ -225,6 +226,7 @@ namespace Lesson2
                 
                 if (bombCount > 0)
                 {
+                    bombTurn++;
                     totalBomb += bombCount;
                     int bombedCount, showCount;
                     DealWithBombInternal(out bombedCount, out showCount,OriginData);
