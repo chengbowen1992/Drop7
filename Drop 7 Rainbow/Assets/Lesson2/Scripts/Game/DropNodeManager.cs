@@ -45,8 +45,10 @@ namespace Lesson2
 
         private Random randomMgr;
         private CommandUtil commandMgr;
-        #region 执行操作
 
+        private int dropHorizonIndex = WIDTH / 2;
+        private int? dropValue = null;
+        
         //流程
         //--1.初始化
 
@@ -68,20 +70,30 @@ namespace Lesson2
         //--6.添加新的一行
         //--7.循环 3-5 至没有新的爆炸点为止
         
+        #region 执行操作
         // 加载初始信息
         public void LoadData(int[,] data, Action<bool> onFinish)
+        {
+            randomMgr = new Random(DateTime.Now.Millisecond);
+            commandMgr = CommandUtil.Instance;
+            
+            LoadDataInternal(data);
+            LoadDataCommand(onFinish);
+        }
+
+        private void LoadDataInternal(int[,] data)
         {
             Assert.IsNotNull(data);
             Assert.IsTrue(data.GetLength(0) == HEIGHT);
             Assert.IsTrue(data.GetLength(1) == WIDTH);
-
-            randomMgr = new Random(DateTime.Now.Millisecond);
-            commandMgr = CommandUtil.Instance;
             
             BombList.Clear();
             BombedList.Clear();
             OutList.Clear();
 
+            dropValue = null;
+            dropHorizonIndex = WIDTH / 2;
+            
             OriginData = data;
             BottomHeight = 0;
 
@@ -100,14 +112,23 @@ namespace Lesson2
 
             //初始化 行 计数信息
             UpdateHorizonAll();
-            
+        }
+
+        private void LoadDataCommand(Action<bool> onFinish)
+        {
             var loadGroup = GenerateLoadCommands();
             commandMgr.AppendGroup(loadGroup);
             commandMgr.Execute(onFinish);
         }
-        
+
         // 产生掉落元素 
         public void CreateDropItem(float executeTime ,float delayTime,Action<bool> onComplete)
+        {
+            CreateDropItemInternal();
+            CreateDropItemCommand(executeTime, delayTime, onComplete);
+        }
+
+        private int CreateDropItemInternal()
         {
             int randomNum = 0;
             while (randomNum == 0)
@@ -115,92 +136,125 @@ namespace Lesson2
                 randomNum = randomMgr.Next(-2, DropNodeManager.WIDTH);
             }
 
-            var createDropGroup = GenerateCreateDropCommand(randomNum, delayTime, executeTime);
-            commandMgr.AppendGroup(createDropGroup);
-            commandMgr.Execute(onComplete);
+            dropHorizonIndex = WIDTH / 2;
+            dropValue = randomNum;
+            return dropValue.Value;
+        }
+
+        private void CreateDropItemCommand(float executeTime, float delayTime, Action<bool> onComplete)
+        {
+            if (dropValue.HasValue)
+            {
+                var createDropGroup = GenerateCreateDropCommand(dropValue.Value, delayTime, executeTime);
+                commandMgr.AppendGroup(createDropGroup);
+                commandMgr.Execute(onComplete);
+            }
         }
 
         // 横向移动掉落物
         public void MoveDropItem(int fromIndex, int toIndex)
         {
-            if (fromIndex != toIndex)
+            var ifMove = MoveDropItemInternal(fromIndex, toIndex);
+
+            if (ifMove)
             {
-                var moveHorizonCmd = GenerateMoveHorizontalCommand(toIndex, 0f, 0.2f);
-                commandMgr.ExecuteNotWait(moveHorizonCmd);
+                MoveDropItemCommand();
             }
+        }
+
+        private bool MoveDropItemInternal(int fromIndex, int toIndex)
+        {
+            if (fromIndex == toIndex || toIndex == dropHorizonIndex)
+            {
+                return false;
+            }
+
+            dropHorizonIndex = toIndex;
+            return true;
+        }
+
+        private void MoveDropItemCommand()
+        {
+            var moveHorizonCmd = GenerateMoveHorizontalCommand(dropHorizonIndex, 0f, 0.2f);
+            commandMgr.ExecuteNotWait(moveHorizonCmd);
         }
 
         // 选择掉落掉落物
         public bool DropDropItem(int index,Action<bool> onComplete)
         {
-            if (CanDropNode(index))
+            if (CanDropNode(index) && dropValue.HasValue)
             {
-                var targetIndex = TryDropNode(index, NewItem.DropData.Value);
-
-                var dropGroup = GenerateDropItemCommands(targetIndex);
-                commandMgr.AppendGroup(dropGroup);
-                UpdateAllNode();
-                NewItem = null;
-                commandMgr.Execute(onComplete);
+                var targetIndex = DropDropItemInternal(index, dropValue.Value);
+                DropDropItemCommand(targetIndex, onComplete);
                 return true;
             }
 
             return false;
         }
-        
-        // 判断可否在 第 x 列 掉落
-        public bool CanDropNode(int x)
-        {
-            return OriginData[HEIGHT - 1, x] == 0;
-        }
-        
-        // 在 第x列 掉落值val
-        public Vector2Int TryDropNode(int x, int val)
+
+        // 在 第index列 掉落值val
+        private Vector2Int DropDropItemInternal(int index,int val)
         {
             Vector2Int pos = Vector2Int.zero;
             for (int i = 0; i < HEIGHT; i++)
             {
-                var item = OriginData[i, x];
+                var item = OriginData[i, index];
                 if (item == 0)
                 {
-                    OriginData[i, x] = val;
-                    pos = new Vector2Int(x, i);
+                    OriginData[i, index] = val;
+                    pos = new Vector2Int(index, i);
                     break;
                 }
             }
 
+            dropValue = null;
+            
             return pos;
+        }
+
+        private void DropDropItemCommand(Vector2Int targetIndex, Action<bool> onComplete)
+        {
+            var dropGroup = GenerateDropItemCommands(targetIndex);
+            commandMgr.AppendGroup(dropGroup);
+            UpdateAllNode();
+            NewItem = null;
+                
+            commandMgr.Execute(onComplete);
+        }
+
+        // 判断可否在 第 x 列 掉落
+        private bool CanDropNode(int x)
+        {
+            return OriginData[HEIGHT - 1, x] == 0;
         }
         
         // 全部节点更新
-        public void UpdateAllNode()
+        private int UpdateAllNode()
         {
-            int bombAll = 0;
-            
+            int bombCount = 0;
+            int totalBomb = 0;
             do
             {
                 ClearMap();
                 UpdateHorizonAll();
                 UpdateVerticalAll();
                 
-                bombAll = UpdateBombAll(); //可以优化
-
-                if (bombAll > 0)
+                bombCount = UpdateBombInternal(); //可以优化
+                
+                if (bombCount > 0)
                 {
+                    totalBomb += bombCount;
                     int bombedCount, showCount;
-                    DealWithBomb(out bombedCount, out showCount);
+                    DealWithBombInternal(out bombedCount, out showCount);
+                    DealWithBombCommand();
 
-                    var bombGroup = GenerateBombCommands(0.1f,0.3f,0.2f,0.3f);
-                    
-                    DealWitMove();
-
-                    var bombMoveGroup = GenerateBombMoveCommands(0.1f,0.2f);
-                    
-                    commandMgr.AppendGroup(bombGroup);
-                    commandMgr.AppendGroup(bombMoveGroup);
+                    DealWitMoveInternal();
+                    DealWithMoveCommand();
                 }
 
-            } while (bombAll > 0);
+            } while (bombCount > 0);
+
+            return totalBomb;
         }
 
         /// <summary>
@@ -210,7 +264,7 @@ namespace Lesson2
         /// </summary>
         /// <param name="bombCount">爆炸次数</param>
         /// <param name="showCount">显现个数</param>
-        private void DealWithBomb(out int bombCount, out int showCount)
+        private void DealWithBombInternal(out int bombCount, out int showCount)
         {
             bombCount = showCount = 0;
             //处理 隐藏元素
@@ -248,8 +302,14 @@ namespace Lesson2
             }
         }
 
+        private void DealWithBombCommand()
+        {
+            var bombGroup = GenerateBombCommands(0.1f,0.3f,0.2f,0.3f);
+            commandMgr.AppendGroup(bombGroup);
+        }
+
         // 根据爆炸 执行 下行
-        private void DealWitMove()
+        private void DealWitMoveInternal()
         {
             //处理移动列表
             for (int j = 0; j < WIDTH; j++)
@@ -301,6 +361,12 @@ namespace Lesson2
             }
         }
 
+        private void DealWithMoveCommand()
+        {
+            var bombMoveGroup = GenerateBombMoveCommands(0.1f,0.2f);
+            commandMgr.AppendGroup(bombMoveGroup);
+        }
+
         // 从底部生成指定行数目
         // 不生成空元素
         public bool AddBottomLine(int lineHeight,Action<bool> onComplete)
@@ -308,7 +374,15 @@ namespace Lesson2
             if (lineHeight <= 0)
                 return true;
 
-            //为了便于测试，置于前方
+            AddBottomLineInternal(lineHeight);
+            AddBottomLineCommand(lineHeight, onComplete);
+
+            //TODO deal with Game Fail
+            return OutList.Count == 0;
+        }
+
+        private void AddBottomLineInternal(int lineHeight)
+        {
             ClearMap();
 
             for (int i = HEIGHT - 1; i >= 0; i--)
@@ -342,16 +416,16 @@ namespace Lesson2
                     OriginData[i, j] = BottomArray[i, j] = randVal;
                 }
             }
+        }
 
+        private void AddBottomLineCommand(int lineHeight, Action<bool> onComplete)
+        {
             var bottomGroup = GenerateBottomCommands(lineHeight, 0f, 0f, 0f, 0f);
             commandMgr.AppendGroup(bottomGroup);
-            
             UpdateAllNode();
-            
             commandMgr.Execute(onComplete);
-            return OutList.Count == 0;
         }
-        
+
         // 清理临时计算的 爆炸 移动 数组 以及 爆炸列表
         private void ClearMap()
         {
@@ -375,7 +449,7 @@ namespace Lesson2
             return randomMgr.Next(1, MAX_NUM + 1);
         }
 
-        public DropNode CreateNode(Vector2Int pos, int val)
+        private DropNode CreateNode(Vector2Int pos, int val)
         {
             var node = new DropNode(pos, val);
 #if UNITY_EDITOR
@@ -762,7 +836,7 @@ namespace Lesson2
         // 更新所有 爆炸 信息
         //== 0 正常 -1 消失 1-n 爆炸值
         //TODO: 可以通过 DropDictionary 优化
-        private int UpdateBombAll()
+        private int UpdateBombInternal()
         {
             int bombCount = 0;
             var data = OriginData;
