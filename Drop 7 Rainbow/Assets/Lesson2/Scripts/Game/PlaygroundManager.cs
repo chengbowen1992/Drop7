@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 using Random = System.Random;
 
 namespace Lesson2
@@ -27,6 +28,9 @@ namespace Lesson2
         public DropNodeManager dropManager;
         public CommandUtil commandMgr;
         public LevelCreatorBase levelCreator;
+        public ScoreManager scoreManager;
+
+        public Text ScoreText;
         
         private DropItem NewItem => dropManager.NewItem;
         private Rect[] detectRects;
@@ -77,11 +81,17 @@ namespace Lesson2
         {
             randomMgr = new Random(DateTime.Now.Millisecond);
             commandMgr = CommandUtil.Instance;
+            scoreManager = ScoreManager.Instance;
+            scoreManager.OnScoreAppend = UpdateScore;
+            UpdateScore(0);
+
             dropManager = new DropNodeManager {DropItemOne = CopyOne, DropRoot = DropRoot};
             BaseGameCommand.DropMgr = dropManager;
+            BaseGameCommand.ScoreMgr = scoreManager;
+            
             levelCreator = LevelCreatorBase.Instance;
             levelCreator.DropMgr = dropManager;
-
+            
             WeightRandom levelRandom = new WeightRandom(randomMgr, "10:1|20:2|20:3|20:4|20:5|20:6|15:7|20:-1|20:-2");
             levelCreator.LevelRandom = levelRandom;
             WeightRandom bombRandom = new WeightRandom(randomMgr, "10:1|20:2|20:3|20:4|20:5|20:6|15:7");
@@ -98,6 +108,11 @@ namespace Lesson2
             });
             DropCount = 0;
 
+        }
+
+        private void UpdateScore(int score)
+        {
+            ScoreText.text = score.ToString();
         }
 
         // 创建掉落物

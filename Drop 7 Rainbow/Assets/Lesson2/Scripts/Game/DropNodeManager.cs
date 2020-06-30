@@ -231,9 +231,9 @@ namespace Lesson2
                     int bombedCount, showCount;
                     DealWithBombInternal(out bombedCount, out showCount,OriginData);
 
-                    var score = bombTurn == 1 ? 7 : 49 * (int)Mathf.Pow(2, bombTurn - 2); 
-                    
-                    DealWithBombCommand(score);
+                    var score = bombTurn == 1 ? 7 : 49 * (int)Mathf.Pow(2, bombTurn - 2);
+
+                    DealWithBombCommand(score, bombTurn);
 
                     DealWitMoveInternal(OriginData);
                     DealWithMoveCommand();
@@ -316,9 +316,9 @@ namespace Lesson2
             }
         }
 
-        private void DealWithBombCommand(int score)
+        private void DealWithBombCommand(int score, int bombTurn)
         {
-            var bombGroup = GenerateBombCommands(score,0.1f,0.3f,0.2f,0.3f);
+            var bombGroup = GenerateBombCommands(score, bombTurn, 0.1f,0.3f,0.2f,0.3f);
             commandMgr.AppendGroup(bombGroup);
         }
 
@@ -614,12 +614,13 @@ namespace Lesson2
             return bottomGroup;
         }
 
-        private CommandGroup GenerateBombCommands(int score,float bombDelayTime,float bombExecuteTime,float bombedDelayTime,float bombedExecuteTime)
+        private CommandGroup GenerateBombCommands(int score, int bombTurn, float bombDelayTime, float bombExecuteTime,
+            float bombedDelayTime, float bombedExecuteTime)
         {
             var bombGroup = commandMgr.CreateGroup(GroupExecuteMode.eAllAtOnce, "bombGroup");
             var bombCount = BombList.Count;
             var bombedCount = BombedList.Count;
-            for (int i = 0; i < bombCount ; i++)
+            for (int i = 0; i < bombCount; i++)
             {
                 var item = BombList[i];
                 var bombItemCmd = new BombItemCommand()
@@ -631,6 +632,13 @@ namespace Lesson2
                     ScoreValue = score,
                 };
                 bombGroup.AppendCommand(bombItemCmd);
+
+                var scoreCmd = new ScoreUpCommnad()
+                {
+                    ScoreAppend = score,
+                    TurnCount = bombTurn,
+                };
+                bombGroup.AppendCommand(scoreCmd);
             }
 
             for (int i = 0; i < bombedCount; i++)
@@ -645,6 +653,7 @@ namespace Lesson2
                 };
                 bombGroup.AppendCommand(bombedItemCmd);
             }
+
             return bombGroup;
         }
 

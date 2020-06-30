@@ -9,6 +9,9 @@ namespace Lesson2
     {
         public override string Description => "BaseCommand of Game";
         public static DropNodeManager DropMgr { get; set; }
+
+        public static ScoreManager ScoreMgr { get; set; }
+
         public DropItem Target { get; set; }
         public float DelayTime { get; set; }
         public float ExecuteTime { get; set; }
