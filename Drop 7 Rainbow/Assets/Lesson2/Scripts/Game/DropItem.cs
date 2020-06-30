@@ -11,6 +11,19 @@ namespace Lesson2
 {
     public class DropItem : MonoBehaviour
     {
+        public static Dictionary<int, Color> BackgroundColor = new Dictionary<int, Color>()
+        {
+            {-2, new Color(119f / 255f, 140f / 255f, 162f / 255f)},
+            {-1, new Color(209f / 255f, 217f / 255f, 225f / 255f)},
+            {0, Color.white},
+            {1, new Color(253f / 255f, 92f / 255f, 101f / 255f)},
+            {2, new Color(253f / 255f, 150f / 255f, 68f / 255f)},
+            {3, new Color(254f / 255f, 210f / 255f, 48f / 255f)},
+            {4, new Color(38f / 255f, 222f / 255f, 128f / 255f)},
+            {5, new Color(68f / 255f, 170f / 255f, 241f / 255f)},
+            {6, new Color(75f / 255f, 122f / 255f, 236f / 255f)},
+            {7, new Color(167f / 255f, 94f / 255f, 234f / 255f)},
+        };
         public enum DropItemState
         {
             eNone,
@@ -40,7 +53,16 @@ namespace Lesson2
         public DropItemState DropState { get; private set; } = DropItemState.eNone;
 
         public bool IfReady => DropState != DropItemState.eCreate;
-        
+
+        public Color BgColor
+        {
+            get
+            {
+                int val = DropData?.Value ?? 0;
+                return BackgroundColor[val];
+            }
+        }
+
         private MoveItemCommand currentMoveCmd;
 
         public void SetData(DropNode data)
@@ -219,6 +241,7 @@ namespace Lesson2
         {
             ChangeStateTo(DropItemState.eBomb);
 
+            BombText.color = BgColor;
             BombText.text = $"+{cmd.ScoreValue}";
             BombTextAnimation.Play();
             
