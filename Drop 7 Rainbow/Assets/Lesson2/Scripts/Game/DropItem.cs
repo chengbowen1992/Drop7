@@ -47,7 +47,7 @@ namespace Lesson2
         public AnimationCurve DefaultBombAlphaCurve;
         public AnimationCurve DefaultBombedScaleCurve;
         public Animation BombTextAnimation;
-        public ParticleSystem BombEffect;
+        public FlatFX BombEffect;
         
         public int LastVal = 0;
 
@@ -243,9 +243,12 @@ namespace Lesson2
             ChangeStateTo(DropItemState.eBomb);
             
             SoundManager.Instance.PlaySound(SoundNames.Sound_Bomb);
-            var colorOverTime = BombEffect.colorOverLifetime;
-            colorOverTime.color = new ParticleSystem.MinMaxGradient(BgColor, BgColor);
-            BombEffect.Play();
+
+            DropImage.gameObject.SetActive(false);
+            
+            //TODO
+            BombEffect.AddEffect(BombEffect.transform.position,(int)FlatFXType.Explosion);
+            BombEffect.AddEffect(BombEffect.transform.position,(int)FlatFXType.Pop);
             
             yield return new WaitForSeconds(cmd.DelayTime);
 
