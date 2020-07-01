@@ -47,6 +47,7 @@ namespace Lesson2
         public AnimationCurve DefaultBombAlphaCurve;
         public AnimationCurve DefaultBombedScaleCurve;
         public Animation BombTextAnimation;
+        public ParticleSystem BombEffect;
         
         public int LastVal = 0;
 
@@ -240,17 +241,20 @@ namespace Lesson2
         private IEnumerator PlayBombItem(BombItemCommand cmd)
         {
             ChangeStateTo(DropItemState.eBomb);
-
-            BombText.color = BgColor;
-            BombText.text = $"+{cmd.ScoreValue}";
-            BombTextAnimation.Play();
+            
+            SoundManager.Instance.PlaySound(SoundNames.Sound_Bomb);
+            var colorOverTime = BombEffect.colorOverLifetime;
+            colorOverTime.color = new ParticleSystem.MinMaxGradient(BgColor, BgColor);
+            BombEffect.Play();
             
             yield return new WaitForSeconds(cmd.DelayTime);
 
             float totalTime = cmd.ExecuteTime;
             var timeCounter = 0f;
-
-            SoundManager.Instance.PlaySound(SoundNames.Sound_Bomb);
+            
+            BombText.color = BgColor;
+            BombText.text = $"+{cmd.ScoreValue}";
+            BombTextAnimation.Play();
             
             if (totalTime > 0)
             {
@@ -267,7 +271,7 @@ namespace Lesson2
                     yield return null;
                 }
             }
-
+            yield return new WaitForSeconds(0.15f);
             ChangeStateTo(DropItemState.eNone);
             cmd.OnComplete(true);
             Destroy(this.gameObject);

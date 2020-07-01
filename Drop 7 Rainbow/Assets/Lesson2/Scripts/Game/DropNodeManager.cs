@@ -318,7 +318,7 @@ namespace Lesson2
 
         private void DealWithBombCommand(int score, int bombTurn)
         {
-            var bombGroup = GenerateBombCommands(score, bombTurn, 0.1f,0.3f,0.2f,0.3f);
+            var bombGroup = GenerateBombCommands(score, bombTurn, 0.3f,0.3f,0.2f,0.3f);
             commandMgr.AppendGroup(bombGroup);
         }
 

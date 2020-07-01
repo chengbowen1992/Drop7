@@ -15,7 +15,8 @@ namespace Lesson2
         public static readonly int MinTuneCount = 5;
 
         public Canvas Scaler;
-
+        public Camera MainCamera;
+        
         public AudioSource MusicPlayer;
         public AudioSource SoundPlayer;
         
@@ -69,8 +70,8 @@ namespace Lesson2
             for (int i = 0; i < total; i++)
             {
                 int deltaIndex = i - center;
-                var centerPos = new Vector2(deltaIndex * cell * Scaler.scaleFactor + cenPos.x, cenPos.y);
-                var rectSize = new Vector2(cell,cell * DropNodeManager.HEIGHT) * Scaler.scaleFactor;
+                var centerPos = new Vector2(deltaIndex * cell /** Scaler.scaleFactor*/ + cenPos.x, cenPos.y);
+                var rectSize = new Vector2(cell,cell * DropNodeManager.HEIGHT) /** Scaler.scaleFactor*/;
                 var rectPos = centerPos - rectSize * 0.5f;
                 detectRects[i] = new Rect(rectPos, rectSize);
             }
@@ -125,11 +126,15 @@ namespace Lesson2
         //游戏循环
         private void Update()
         {
+            Vector2 mousePos;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(Scaler.transform as RectTransform,
+                Input.mousePosition, MainCamera, out mousePos);
+
             int count = detectRects?.Length ?? 0;
             
             for (int i = 0; i < count; i++)
             {
-                if (detectRects[i].Contains(Input.mousePosition))
+                if (detectRects[i].Contains(mousePos))
                 {
                     var newItem = dropManager.NewItem;
                     if (newItem != null && newItem.IfReady)
@@ -173,7 +178,11 @@ namespace Lesson2
         private void OnDrawGizmos()
         {
             bool haveInput = Input.GetMouseButton(0);
-            var inputPos = Input.mousePosition;
+            Vector2 mousePos;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(Scaler.transform as RectTransform,
+                Input.mousePosition, MainCamera, out mousePos);
+            var inputPos = mousePos;
+            
             int count = detectRects?.Length ?? 0;
             
             for (int i = 0; i < count; i++)
