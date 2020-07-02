@@ -245,11 +245,15 @@ namespace Lesson2
             SoundManager.Instance.PlaySound(SoundNames.Sound_Bomb);
 
             DropImage.gameObject.SetActive(false);
+
+            var tempColor = BgColor;
             
             //TODO
-            BombEffect.AddEffect(BombEffect.transform.position,(int)FlatFXType.Explosion);
-            BombEffect.AddEffect(BombEffect.transform.position,(int)FlatFXType.Pop);
-            
+            BombEffect.AddEffectExt(BombEffect.transform.position, (int) FlatFXType.Explosion, tempColor, tempColor,
+                tempColor, tempColor);
+            BombEffect.AddEffectExt(BombEffect.transform.position, (int) FlatFXType.Pop, tempColor, tempColor,
+                tempColor, tempColor);
+
             yield return new WaitForSeconds(cmd.DelayTime);
 
             float totalTime = cmd.ExecuteTime;
@@ -283,10 +287,18 @@ namespace Lesson2
         private IEnumerator PlayBombedItem(BombItemCommand cmd)
         {
             ChangeStateTo(DropItemState.eBombed);
-            
+            var newVal = cmd.NewValue.Value;
+            bool ifBomb = LastVal != newVal && newVal > 0;
             yield return new WaitForSeconds(cmd.DelayTime);
-            DropData.UpdateVal(cmd.NewValue.Value);
-            LastVal = DropData.Value;
+            DropData.UpdateVal(newVal);
+            LastVal = newVal;
+            
+            if (ifBomb)
+            {
+                var tempColor = BgColor;
+                BombEffect.AddEffectExt(BombEffect.transform.position, (int) FlatFXType.Crosslight, tempColor, tempColor,
+                    tempColor, tempColor);
+            }
             
             float totalTime = cmd.ExecuteTime;
             var timeCounter = 0f;

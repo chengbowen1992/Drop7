@@ -125,6 +125,72 @@ public class FlatFX:MonoBehaviour{
 		));
 	}
 
+	public void AddEffectExt(Vector2 position, int effectNumber, Color? startInner = null, Color? startOuter = null,
+		Color? endInner = null, Color? endOuter = null)
+	{
+		var currentSetting = settings[effectNumber];
+		
+		if (startInner.HasValue)
+		{
+			currentSetting.start.innerColor = startInner.Value;
+		}
+
+		if (startOuter.HasValue)
+		{
+			currentSetting.start.outerColor = startOuter.Value;
+		}
+		
+		if (endInner.HasValue)
+		{
+			currentSetting.end.innerColor = endInner.Value;
+		}
+		
+		if (endOuter.HasValue)
+		{
+			currentSetting.end.outerColor = endOuter.Value;
+		}
+		
+		Vector2 randomPlace = Random.insideUnitCircle * currentSetting.randomizePosition;
+		float seed = Random.value;
+		if (currentSetting.type == FlatFXType.SunRays)
+		{
+			currentSetting.start.rotation = Random.Range(0f, 360f);
+			currentSetting.end.rotation =
+				currentSetting.start.rotation - 60f * currentSetting.lifetime;
+		}
+		else
+		{
+			currentSetting.start.rotation = Random.Range(0f, 360f);
+			currentSetting.end.rotation = currentSetting.start.rotation;
+		}
+
+		particles.Add(new FlatFXParticle(
+			currentSetting.type,
+			currentSetting.lifetime,
+			currentSetting.sectorCount,
+			currentSetting.easing,
+			useUnscaledTime,
+			new FlatFXState(
+				transform.InverseTransformPoint(position + randomPlace),
+				currentSetting.start.size,
+				currentSetting.start.thickness,
+				currentSetting.start.rotation,
+				currentSetting.start.innerColor,
+				currentSetting.start.outerColor,
+				seed
+			),
+			new FlatFXState(
+				transform.InverseTransformPoint(position + randomPlace),
+				currentSetting.end.size,
+				currentSetting.end.thickness,
+				currentSetting.end.rotation,
+				currentSetting.end.innerColor,
+				currentSetting.end.outerColor,
+				seed
+			)
+		));
+	}
+
 	public int particleCount{
 		get{return particles.Count;}
 	}
