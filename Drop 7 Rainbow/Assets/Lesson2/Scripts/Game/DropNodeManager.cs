@@ -628,6 +628,7 @@ namespace Lesson2
                     Target = GetFromDrop(item.Position),
                     DelayTime = bombDelayTime,
                     ExecuteTime = bombExecuteTime,
+                    BombCount = bombCount,
                     NewValue = null,
                     ScoreValue = score,
                 };
@@ -636,6 +637,7 @@ namespace Lesson2
                 var scoreCmd = new ScoreUpCommnad()
                 {
                     ScoreAppend = score,
+                    BombNum = bombCount,
                     TurnCount = bombTurn,
                 };
                 bombGroup.AppendCommand(scoreCmd);
@@ -648,6 +650,7 @@ namespace Lesson2
                 {
                     Target = GetFromDrop(item.Position),
                     NewValue = item.Value,
+                    BombCount = bombedCount,
                     ExecuteTime = bombedExecuteTime,
                     DelayTime = bombedDelayTime,
                 };

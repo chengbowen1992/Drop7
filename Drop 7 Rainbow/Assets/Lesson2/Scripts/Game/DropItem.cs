@@ -11,10 +11,10 @@ namespace Lesson2
 {
     public class DropItem : MonoBehaviour
     {
-        public static Dictionary<int, Color> BackgroundColor = new Dictionary<int, Color>()
+        public static Dictionary<int, Color> BackgroundColor3 = new Dictionary<int, Color>()
         {
-            {-2, new Color(119f / 255f, 140f / 255f, 162f / 255f)},
-            {-1, new Color(209f / 255f, 217f / 255f, 225f / 255f)},
+            {-2, new Color(119f / 255f, 140f / 255f, 162f / 255f, 0f)},
+            {-1, new Color(209f / 255f, 217f / 255f, 225f / 255f, 0f)},
             {0, Color.white},
             {1, new Color(253f / 255f, 92f / 255f, 101f / 255f)},
             {2, new Color(253f / 255f, 150f / 255f, 68f / 255f)},
@@ -24,6 +24,20 @@ namespace Lesson2
             {6, new Color(75f / 255f, 122f / 255f, 236f / 255f)},
             {7, new Color(167f / 255f, 94f / 255f, 234f / 255f)},
         };
+        public static Dictionary<int, Color> BackgroundColor = new Dictionary<int, Color>()
+        {
+            {-2, new Color(119f / 255f, 140f / 255f, 162f / 255f, 0f)},
+            {-1, new Color(209f / 255f, 217f / 255f, 225f / 255f, 0f)},
+            {0, Color.white},
+            {1, new Color(169f / 255f, 31f / 255f, 36f / 255f)},
+            {2, new Color(204f / 255f, 102f / 255f, 0f / 255f)},
+            {3, new Color(255f / 255f, 204f / 255f, 0f / 255f)},
+            {4, new Color(176f / 255f, 208f / 255f, 46f / 255f)},
+            {5, new Color(89f / 255f, 191f / 255f, 185f / 255f)},
+            {6, new Color(194f / 255f, 33f / 255f, 136f / 255f)},
+            {7, new Color(167f / 255f, 94f / 255f, 234f / 255f)},
+        };
+        
         public enum DropItemState
         {
             eNone,
@@ -33,7 +47,8 @@ namespace Lesson2
             eBombed
         }
 
-        public Image DropImage;
+        public Image NumImage;
+        public Image BgImage;
         public Text BombText;
         
         public DropNode DropData;
@@ -82,7 +97,8 @@ namespace Lesson2
                 LastVal = DropData.Value;
                 
                 //TODO 用Atlas
-                DropImage.sprite = Resources.Load<Sprite>($"Common/Images/{LastVal.ToString().Replace("-", "_")}");
+                NumImage.sprite = Resources.Load<Sprite>($"Common/Images/num_{LastVal.ToString().Replace("-", "_")}");
+                BgImage.color = BackgroundColor[LastVal];
             }
         }
 
@@ -244,23 +260,20 @@ namespace Lesson2
             
             SoundManager.Instance.PlaySound(SoundNames.Sound_Bomb);
 
-            DropImage.gameObject.SetActive(false);
+            BgImage.gameObject.SetActive(false);
 
             var tempColor = BgColor;
             
             //TODO
             BombEffect.AddEffectExt(BombEffect.transform.position, (int) FlatFXType.Explosion, tempColor, tempColor,
                 tempColor, tempColor);
-            BombEffect.AddEffectExt(BombEffect.transform.position, (int) FlatFXType.Pop, tempColor, tempColor,
-                tempColor, tempColor);
 
             yield return new WaitForSeconds(cmd.DelayTime);
 
             float totalTime = cmd.ExecuteTime;
             var timeCounter = 0f;
-            
-            BombText.color = BgColor;
-            BombText.text = $"+{cmd.ScoreValue}";
+
+            BombText.text = $"+{cmd.ScoreValue * cmd.BombCount}";
             BombTextAnimation.Play();
             
             if (totalTime > 0)
@@ -272,7 +285,9 @@ namespace Lesson2
                     var currentAlpha = DefaultBombAlphaCurve.Evaluate(percent);
 
                     transform.localScale = new Vector3(currentScale, currentScale, 1);
-                    DropImage.color = new Color(1,1,1,currentAlpha);
+                    var lastColor = BgImage.color;
+                    lastColor.a = currentAlpha;
+                    BgImage.color = lastColor;
                     
                     timeCounter += Time.deltaTime;
                     yield return null;
@@ -296,8 +311,11 @@ namespace Lesson2
             if (ifBomb)
             {
                 var tempColor = BgColor;
-                BombEffect.AddEffectExt(BombEffect.transform.position, (int) FlatFXType.Crosslight, tempColor, tempColor,
+                BombEffect.AddEffectExt(BombEffect.transform.position, (int) FlatFXType.Pop, tempColor, tempColor,
                     tempColor, tempColor);
+
+                // BombEffect.AddEffectExt(BombEffect.transform.position, (int) FlatFXType.Ripple, tempColor, tempColor,
+                //     tempColor, tempColor);
             }
             
             float totalTime = cmd.ExecuteTime;
@@ -316,7 +334,8 @@ namespace Lesson2
             }
             
             //TODO 用Atlas
-            DropImage.sprite = Resources.Load<Sprite>($"Common/Images/{LastVal.ToString().Replace("-", "_")}");
+            NumImage.sprite = Resources.Load<Sprite>($"Common/Images/num_{LastVal.ToString().Replace("-", "_")}");
+            BgImage.color = BackgroundColor[LastVal];
             ChangeStateTo(DropItemState.eNone);
             cmd.OnComplete(true);
         }

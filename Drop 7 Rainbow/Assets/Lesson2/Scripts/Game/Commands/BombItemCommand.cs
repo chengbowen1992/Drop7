@@ -9,7 +9,8 @@ namespace Lesson2
     {
         public int? NewValue;
         public int ScoreValue;
-
+        public int BombCount;
+        
         public override void OnAppend()
         {
             if (!NewValue.HasValue)

@@ -9,10 +9,11 @@ namespace Lesson2
     {
         public int ScoreAppend;
         public int TurnCount;
+        public int BombNum;
 
         public override void OnExecute()
         {
-            ScoreMgr.AppendScore(ScoreAppend,TurnCount);
+            ScoreMgr.AppendScore(ScoreAppend * BombNum,TurnCount);
             this.OnComplete(true);
         }
     }
