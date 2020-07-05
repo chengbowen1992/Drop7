@@ -345,5 +345,14 @@ namespace Lesson2
                 ExecuteAfterOne();
             }
         }
+
+        public void ResetManager()
+        {
+            DefaultGroup.ResetGroup();
+            GroupsDictionary.Clear();
+            GroupsTodo.Clear();
+            GroupDoing.ResetGroup();
+            CurrentState = ManagerState.eEmpty;
+        }
     }
 }

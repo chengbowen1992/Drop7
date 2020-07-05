@@ -10,6 +10,12 @@ namespace Lesson2
 {
     public class PlaygroundManager : MonoBehaviour
     {
+        public enum GameState
+        {
+            eGaming,
+            eFinish
+        }
+        
         public static readonly int DefaultIndexX = 3;
         public static readonly int MaxTurnCount = 30;
         public static readonly int MinTuneCount = 5;
@@ -32,12 +38,16 @@ namespace Lesson2
         public ScoreManager scoreManager;
 
         public Text ScoreText;
-        
+        public Text LevelText;
+        public Text BestText;
+
         private DropItem NewItem => dropManager.NewItem;
         private Rect[] detectRects;
         public int SelectIndex = DefaultIndexX;
 
         public int DropCount = 0;
+
+        public GameState CurrentGameState { get; private set; }
 
         //初始化音乐管理器
         public void InitSoundManager()
@@ -83,32 +93,75 @@ namespace Lesson2
             randomMgr = new Random(DateTime.Now.Millisecond);
             commandMgr = CommandUtil.Instance;
             scoreManager = ScoreManager.Instance;
-            scoreManager.OnScoreAppend = UpdateScore;
+            scoreManager.OnScoreChanged = UpdateScore;
+            scoreManager.OnLevelChanged = UpdateLevel;
+            scoreManager.OnBestChangeed = UpdateBest;
+            
             UpdateScore(0);
-
+            UpdateLevel(1);
+            UpdateBest(scoreManager.Best);
+            
             dropManager = new DropNodeManager {DropItemOne = CopyOne, DropRoot = DropRoot};
             BaseGameCommand.DropMgr = dropManager;
             BaseGameCommand.ScoreMgr = scoreManager;
             
             levelCreator = LevelCreatorBase.Instance;
             levelCreator.DropMgr = dropManager;
-            
-            WeightRandom levelRandom = new WeightRandom(randomMgr, "10:1|20:2|20:3|20:4|20:5|20:6|15:7|20:-1|20:-2");
+            WeightRandom createRandom = new WeightRandom(randomMgr, "20:2|30:3|20:4|15:5|5:6|5:7|2:1|10:-1|15:-2");
+            levelCreator.CreateRandom = createRandom;            
+            WeightRandom levelRandom = new WeightRandom(randomMgr, "20:1|20:2|20:3|20:4|20:5|20:6|20:7|20:-1|20:-2");
             levelCreator.LevelRandom = levelRandom;
             WeightRandom bombRandom = new WeightRandom(randomMgr, "10:1|20:2|20:3|20:4|20:5|20:6|15:7");
             levelCreator.BombRandom = bombRandom;
             
             dropManager.levelCreator = levelCreator;
+
+            var localData = LocalSaveManager.GameData;
             
-            WeightRandom createRandom = new WeightRandom(randomMgr, "20:2|30:3|20:4|15:5|5:6|5:7|2:1|10:-1|15:-2");
-            var dataArray = levelCreator.CreateLevel(DropNodeManager.WIDTH, DropNodeManager.HEIGHT, 21, createRandom);
+            ReStartLevel(localData);
+            DropCount = 0;
+        }
+
+        public void ResetLevel()
+        {
+            commandMgr.ResetManager();
+            titleManager.ResetManager();
+            scoreManager.ResetManager();
+            dropManager.ResetManager();
+            DropCount = 0;
+        }
+
+        public void ReStartLevel(string levelInfo)
+        {
+            CurrentGameState = GameState.eGaming;
+            if (!string.IsNullOrEmpty(levelInfo))
+            {
+                var gameData = GameSaveData.FromJson(levelInfo);
+
+                if (gameData != null)
+                {
+                    int[,] dataInfo = GameSaveData.StringToArray(gameData.OriginData);
+                    int dropVal = gameData.DropVal;
+                    dropManager.LoadData(dataInfo, _ => { CreateNewDrop(null, dropVal, 0.3f, 0); });
+                    return;
+                }
+            }
+
+            var dataArray = levelCreator.CreateLevel(DropNodeManager.WIDTH, DropNodeManager.HEIGHT, 21);
             dropManager.LoadData(dataArray, _ =>
             {
                 titleManager.AutoUpdateShow();
-                CreateNewDrop(null,0.3f, 0);
+                CreateNewDrop(null, null, 0.3f, 0);
             });
-            DropCount = 0;
+        }
 
+        public void SaveDataToLocal()
+        {
+            var gameData = new GameSaveData();
+            gameData.OriginData = GameSaveData.ArrayToString(dropManager.OriginData);
+            gameData.DropVal = dropManager.NewItem?.DropData.Value ?? -2;
+            
+            LocalSaveManager.GameData = gameData.ToJson();
         }
 
         private void UpdateScore(int score)
@@ -116,22 +169,64 @@ namespace Lesson2
             ScoreText.text = score.ToString();
         }
 
+        private void UpdateLevel(int level)
+        {
+            LevelText.text = $"Level: {level}";
+        }
+
+        public void UpdateBest(int best)
+        {
+            BestText.text = $"Best: {best}";
+        }
+
         // 创建掉落物
-        public void CreateNewDrop(Action<bool> onComplete, float executeTime = 1f, float delayTime = 0)
+        public void CreateNewDrop(Action<bool> onComplete,int? dropVal = null, float executeTime = 1f, float delayTime = 0)
         {
             SelectIndex = DefaultIndexX;
-            dropManager.CreateDropItem(executeTime, delayTime, onComplete);
+            dropManager.CreateDropItem(executeTime, dropVal, delayTime, onComplete);
         }
-        
+
+        private void OnGameFinished(bool ifWin = false)
+        {
+            CurrentGameState = GameState.eFinish;
+            LocalSaveManager.GameData = "";
+            
+            //TODO
+            ResetLevel();
+            ReStartLevel(LocalSaveManager.GameData);
+        }
+
         //游戏循环
         private void Update()
+        {
+            if (CurrentGameState == GameState.eGaming)
+            {
+                UpdateInGaming();
+            }
+            else if (CurrentGameState == GameState.eFinish)
+            {
+                UpdateFinished();
+            }
+
+#if UNITY_EDITOR
+            //测试重置游戏
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                SaveDataToLocal();
+                ResetLevel();
+                ReStartLevel(LocalSaveManager.GameData);
+            }
+#endif
+        }
+
+        private void UpdateInGaming()
         {
             Vector2 mousePos;
             RectTransformUtility.ScreenPointToLocalPointInRectangle(Scaler.transform as RectTransform,
                 Input.mousePosition, MainCamera, out mousePos);
 
             int count = detectRects?.Length ?? 0;
-            
+
             for (int i = 0; i < count; i++)
             {
                 if (detectRects[i].Contains(mousePos))
@@ -141,23 +236,38 @@ namespace Lesson2
                     {
                         if (Input.GetMouseButtonUp(0))
                         {
-                            dropManager.DropDropItem(i, onDropComplete =>
+                            bool ifGoOn = dropManager.DropDropItem(i, onDropComplete =>
                             {
                                 if (titleManager.AutoUpdateShow())
                                 {
-                                    dropManager.AddBottomLine(1 ,onAddLineComplete=>
+                                    if (dropManager.CanAddBottomLine(1))
                                     {
-                                        CreateNewDrop(null,0.3f, 0);
-                                    });
+                                        scoreManager.AppendLevel();
+
+                                        dropManager.AddBottomLine(1,
+                                            onAddLineComplete => { CreateNewDrop(null, null, 0.3f, 0); });
+                                    }
+                                    else
+                                    {
+                                        OnGameFinished(false);
+                                    }
                                 }
                                 else
                                 {
-                                    CreateNewDrop(null,0.3f, 0);
+                                    CreateNewDrop(null, null, 0.3f, 0);
                                 }
                             });
 
-                            DropCount++;
-                            SelectIndex = i;
+                            if (ifGoOn)
+                            {
+                                DropCount++;
+                                SelectIndex = i;
+                            }
+                            else
+                            {
+                                OnGameFinished(false);
+                            }
+
                             return;
                         }
                         else if (Input.GetMouseButton(0))
@@ -172,6 +282,11 @@ namespace Lesson2
                     }
                 }
             }
+        }
+
+        private void UpdateFinished()
+        {
+            
         }
 
         #region 调试

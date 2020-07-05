@@ -108,15 +108,15 @@ namespace Lesson2
         }
 
         // 产生掉落元素 
-        public void CreateDropItem(float executeTime ,float delayTime,Action<bool> onComplete)
+        public void CreateDropItem(float executeTime,int? dropVal ,float delayTime,Action<bool> onComplete)
         {
-            CreateDropItemInternal();
+            CreateDropItemInternal(dropVal);
             CreateDropItemCommand(executeTime, delayTime, onComplete);
         }
 
-        private int CreateDropItemInternal()
+        private int CreateDropItemInternal(int? dropVal)
         {
-            int randomNum = GetLevelNodeNum();
+            int randomNum = dropVal ?? GetLevelNodeNum();
 
             dropHorizonIndex = WIDTH / 2;
             dropValue = randomNum;
@@ -381,18 +381,27 @@ namespace Lesson2
             commandMgr.AppendGroup(bombMoveGroup);
         }
 
+        public bool CanAddBottomLine(int lingHeight)
+        {
+            for (int i = 0; i < WIDTH; i++)
+            {
+                if (OriginData[HEIGHT - 1, i] != 0)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         // 从底部生成指定行数目
         // 不生成空元素
-        public bool AddBottomLine(int lineHeight,Action<bool> onComplete)
+        public void AddBottomLine(int lineHeight,Action<bool> onComplete)
         {
-            if (lineHeight <= 0)
-                return true;
+            Assert.IsTrue(lineHeight > 0);
 
             AddBottomLineInternal(lineHeight, OriginData);
             AddBottomLineCommand(lineHeight, onComplete);
-
-            //TODO deal with Game Fail
-            return OutList.Count == 0;
         }
 
         private void AddBottomLineInternal(int lineHeight,int[,] data)
@@ -989,7 +998,37 @@ namespace Lesson2
         }
 
         #endregion
-        
+
+        public void ResetManager()
+        {
+            for (int i = 0; i < HEIGHT; i++)
+            {
+                for (int j = 0; j < WIDTH; j++)
+                {
+                    OriginData[i, j] = 0;
+                }
+            }
+
+            foreach (var bombItem in DropDictionary.Values)
+            {
+                bombItem.DestroySelf();
+            }
+            
+            DropDictionary.Clear();
+            
+            OutList.Clear();
+            BombList.Clear();
+            BombedList.Clear();
+            MoveList.Clear();
+            BottomHeight = 0;
+
+            if (NewItem)
+            {
+                NewItem.DestroySelf();
+                NewItem = null;
+            }
+        }
+
         #region 测试
 
         public enum DebugInfoType

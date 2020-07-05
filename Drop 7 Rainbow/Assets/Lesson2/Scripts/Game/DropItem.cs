@@ -11,7 +11,7 @@ namespace Lesson2
 {
     public class DropItem : MonoBehaviour
     {
-        public static Dictionary<int, Color> BackgroundColor3 = new Dictionary<int, Color>()
+        public static readonly Dictionary<int, Color> DropNodeColor = new Dictionary<int, Color>()
         {
             {-2, new Color(119f / 255f, 140f / 255f, 162f / 255f, 0f)},
             {-1, new Color(209f / 255f, 217f / 255f, 225f / 255f, 0f)},
@@ -24,7 +24,8 @@ namespace Lesson2
             {6, new Color(75f / 255f, 122f / 255f, 236f / 255f)},
             {7, new Color(167f / 255f, 94f / 255f, 234f / 255f)},
         };
-        public static Dictionary<int, Color> BackgroundColor = new Dictionary<int, Color>()
+        
+        public static Dictionary<int, Color> BackgroundColorOld = new Dictionary<int, Color>()
         {
             {-2, new Color(119f / 255f, 140f / 255f, 162f / 255f, 0f)},
             {-1, new Color(209f / 255f, 217f / 255f, 225f / 255f, 0f)},
@@ -75,7 +76,7 @@ namespace Lesson2
             get
             {
                 int val = DropData?.Value ?? 0;
-                return BackgroundColor[val];
+                return DropNodeColor[val];
             }
         }
 
@@ -98,7 +99,7 @@ namespace Lesson2
                 
                 //TODO 用Atlas
                 NumImage.sprite = Resources.Load<Sprite>($"Common/Images/num_{LastVal.ToString().Replace("-", "_")}");
-                BgImage.color = BackgroundColor[LastVal];
+                BgImage.color = DropNodeColor[LastVal];
             }
         }
 
@@ -335,7 +336,7 @@ namespace Lesson2
             
             //TODO 用Atlas
             NumImage.sprite = Resources.Load<Sprite>($"Common/Images/num_{LastVal.ToString().Replace("-", "_")}");
-            BgImage.color = BackgroundColor[LastVal];
+            BgImage.color = DropNodeColor[LastVal];
             ChangeStateTo(DropItemState.eNone);
             cmd.OnComplete(true);
         }
@@ -367,6 +368,11 @@ namespace Lesson2
         public void ShowItem(bool ifShow)
         {
             gameObject.SetActive(ifShow);
+        }
+
+        public void DestroySelf()
+        {
+            Destroy(gameObject);
         }
     }
 }

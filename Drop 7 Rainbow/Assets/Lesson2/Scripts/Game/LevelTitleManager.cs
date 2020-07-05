@@ -87,5 +87,9 @@ namespace Lesson2
             }
         }
 
+        public void ResetManager()
+        {
+            UpdateShow(TotalCount, TotalCount);
+        }
     }
 }
