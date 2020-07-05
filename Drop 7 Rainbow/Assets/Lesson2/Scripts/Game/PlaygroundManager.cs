@@ -222,6 +222,11 @@ namespace Lesson2
 #endif
         }
 
+        private void OnApplicationQuit()
+        {
+            SaveDataToLocal();
+        }
+
         private void UpdateInGaming()
         {
             Vector2 mousePos;
