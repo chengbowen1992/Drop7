@@ -41,6 +41,8 @@ namespace Lesson2
         public Text LevelText;
         public Text BestText;
 
+        public Button ReplayButton;
+
         private DropItem NewItem => dropManager.NewItem;
         private Rect[] detectRects;
         public int SelectIndex = DefaultIndexX;
@@ -186,10 +188,11 @@ namespace Lesson2
             dropManager.CreateDropItem(executeTime, dropVal, delayTime, onComplete);
         }
 
-        private void OnGameFinished(bool ifWin = false)
+        public void OnGameFinished(bool ifWin = false)
         {
             CurrentGameState = GameState.eFinish;
             LocalSaveManager.GameData = "";
+            LocalSaveManager.BestScore = scoreManager.Score;
             
             //TODO
             ResetLevel();
