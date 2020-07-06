@@ -83,7 +83,7 @@ namespace Lesson2
             {
                 int deltaIndex = i - center;
                 var centerPos = new Vector2(deltaIndex * cell /** Scaler.scaleFactor*/ + cenPos.x, cenPos.y);
-                var rectSize = new Vector2(cell,cell * DropNodeManager.HEIGHT) /** Scaler.scaleFactor*/;
+                var rectSize = new Vector2(cell,cell * (DropNodeManager.HEIGHT + 2)) /** Scaler.scaleFactor*/;
                 var rectPos = centerPos - rectSize * 0.5f;
                 detectRects[i] = new Rect(rectPos, rectSize);
             }
