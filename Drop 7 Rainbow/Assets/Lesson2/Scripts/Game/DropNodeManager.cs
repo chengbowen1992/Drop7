@@ -533,7 +533,7 @@ namespace Lesson2
                         };
                         loadGroup.AppendCommand(createItemCmd);
                                 
-                        var beginPos = DropItem.GetPositionByIndex(new Vector2Int(j, HEIGHT));
+                        var beginPos = DropItem.GetPositionByIndex(new Vector2Int(j, HEIGHT-1));
                         var endPos = DropItem.GetPositionByIndex(new Vector2Int(j, i));
 
                         //move
