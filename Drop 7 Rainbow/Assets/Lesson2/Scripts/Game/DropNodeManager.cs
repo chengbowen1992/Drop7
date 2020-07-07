@@ -15,12 +15,12 @@ namespace Lesson2
     public sealed class DropNodeManager
     {
         public static readonly int WIDTH = 7;
-        public static readonly int HEIGHT = 7;
+        public static readonly int HEIGHT = 8;
         public static readonly int MAX_NUM = 7; //Included
         public static readonly int CENTER_Y = 3;
         public static readonly int CENTER_X = 3;
         public static readonly int CELL_SIZE = 100;
-        public static readonly float DROP_LOCAL_Y = (HEIGHT + 1) * CELL_SIZE * 0.5f;
+        public static readonly float DROP_LOCAL_Y = HEIGHT * CELL_SIZE * 0.5f;
 
         public int[,] OriginData = new int[HEIGHT, WIDTH]; //原始数据
         public int[,] HorizonMap = new int[HEIGHT, WIDTH]; //行 统计
@@ -44,6 +44,9 @@ namespace Lesson2
         public DropItem DropItemOne;
 
         public LevelCreatorBase levelCreator;
+
+        public Action<bool> OnGameFinished;
+        
         private CommandUtil commandMgr;
 
         private int dropHorizonIndex = WIDTH / 2;
@@ -162,16 +165,10 @@ namespace Lesson2
         }
 
         // 选择掉落掉落物
-        public bool DropDropItem(int index,Action<bool> onComplete)
+        public void DropDropItem(int index,Action<bool> onComplete)
         {
-            if (CanDropNode(index, OriginData) && dropValue.HasValue)
-            {
-                var targetIndex = DropDropItemInternal(index, dropValue.Value, OriginData);
-                DropDropItemCommand(targetIndex, onComplete);
-                return true;
-            }
-
-            return false;
+            var targetIndex = DropDropItemInternal(index, dropValue.Value, OriginData);
+            DropDropItemCommand(targetIndex, onComplete);
         }
 
         // 在 第index列 掉落值val
@@ -200,14 +197,22 @@ namespace Lesson2
             commandMgr.AppendGroup(dropGroup);
             UpdateAllNode();
             NewItem = null;
-                
+
+            if (CanGameFinish())
+            {
+                var dieBombGroup = GenerateDieBombCommands();
+                commandMgr.AppendGroup(dieBombGroup);
+                var gameFinishGroup = GenerateGameFinishCommand();
+                commandMgr.AppendGroup(gameFinishGroup);
+            }
+
             commandMgr.Execute(onComplete);
         }
 
         // 判断可否在 第 x 列 掉落
         private bool CanDropNode(int x,int[,] data)
         {
-            return data[HEIGHT - 1, x] == 0;
+            return data[HEIGHT - 2, x] == 0;
         }
         
         // 全部节点更新
@@ -385,7 +390,7 @@ namespace Lesson2
         {
             for (int i = 0; i < WIDTH; i++)
             {
-                if (OriginData[HEIGHT - 1, i] != 0)
+                if (OriginData[HEIGHT - 2, i] != 0)
                 {
                     return false;
                 }
@@ -446,6 +451,15 @@ namespace Lesson2
             var bottomGroup = GenerateBottomCommands(lineHeight, 0f, 0f, 0f, 0f);
             commandMgr.AppendGroup(bottomGroup);
             UpdateAllNode();
+            
+            if (CanGameFinish())
+            {
+                var dieBombGroup = GenerateDieBombCommands();
+                commandMgr.AppendGroup(dieBombGroup);
+                var gameFinishGroup = GenerateGameFinishCommand();
+                commandMgr.AppendGroup(gameFinishGroup);
+            }
+            
             commandMgr.Execute(onComplete);
         }
 
@@ -696,7 +710,7 @@ namespace Lesson2
         private CommandGroup GenerateDropItemCommands(Vector2Int targetIndex)
         {
             var curPos = NewItem.transform.localPosition;
-            var beginPos = DropItem.GetPositionByIndex(new Vector2Int(targetIndex.x,HEIGHT));
+            var beginPos = DropItem.GetPositionByIndex(new Vector2Int(targetIndex.x, HEIGHT - 1));
             var endPos = DropItem.GetPositionByIndex(targetIndex);
 
             var dropGroup = commandMgr.CreateGroup(GroupExecuteMode.eAfterFinish, "dropGroup");
@@ -739,7 +753,50 @@ namespace Lesson2
             };
             return moveCmd;
         }
-        
+
+        public CommandGroup GenerateDieBombCommands()
+        {
+            var dieBombGroup = commandMgr.CreateGroup(GroupExecuteMode.eAllAtOnce, "dieBombGroup");
+
+            for (int i = 0; i < WIDTH-1; i++)
+            {
+                var itemVal = OriginData[WIDTH - 1, i];
+                if (itemVal != 0)
+                {
+                    //TODO with special bomb
+                }
+            }
+            
+            return dieBombGroup;
+        }
+
+        public CommandGroup GenerateGameFinishCommand()
+        {
+            Assert.IsTrue(CanGameFinish());            
+            var gameFinishGroup = commandMgr.CreateGroup(GroupExecuteMode.eAfterFinish, "gameFinishGroup");
+            var gameFinishCmd = new GameFinishCommand()
+            {
+                Score = ScoreManager.Instance.Score,
+                Level = ScoreManager.Instance.Level,
+                BestScore = ScoreManager.Instance.Best,
+            };
+            gameFinishGroup.AppendCommand(gameFinishCmd);
+            return gameFinishGroup;
+        }
+
+        public bool CanGameFinish()
+        {
+            for (int i = 0; i < WIDTH; i++)
+            {
+                if (OriginData[HEIGHT - 1, i] != 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         #endregion
         
         #region 处理命令

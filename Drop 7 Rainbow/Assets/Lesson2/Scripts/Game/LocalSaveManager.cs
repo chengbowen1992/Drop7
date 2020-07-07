@@ -29,6 +29,12 @@ public class LocalSaveManager
         get => PlayerPrefs.GetString(Key_GameData,"");
         set => PlayerPrefs.SetString(Key_GameData, value);
     }
+
+    public static void ClearData()
+    {
+        PlayerPrefs.SetInt(Key_BestScore,0);
+        PlayerPrefs.SetString(Key_GameData, "");
+    }
 }
 
 [Serializable]

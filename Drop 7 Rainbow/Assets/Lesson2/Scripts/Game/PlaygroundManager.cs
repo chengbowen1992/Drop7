@@ -103,7 +103,7 @@ namespace Lesson2
             UpdateLevel(1);
             UpdateBest(scoreManager.Best);
             
-            dropManager = new DropNodeManager {DropItemOne = CopyOne, DropRoot = DropRoot};
+            dropManager = new DropNodeManager {DropItemOne = CopyOne, DropRoot = DropRoot,OnGameFinished = OnGameFinished};
             BaseGameCommand.DropMgr = dropManager;
             BaseGameCommand.ScoreMgr = scoreManager;
             
@@ -219,6 +219,12 @@ namespace Lesson2
                 ResetLevel();
                 ReStartLevel(LocalSaveManager.GameData);
             }
+
+            //测试清除数据
+            if (Input.GetKeyDown(KeyCode.K))
+            {
+                LocalSaveManager.ClearData();
+            }
 #endif
         }
 
@@ -244,37 +250,37 @@ namespace Lesson2
                     {
                         if (Input.GetMouseButtonUp(0))
                         {
-                            bool ifGoOn = dropManager.DropDropItem(i, onDropComplete =>
+                            dropManager.DropDropItem(i, onDropComplete =>
                             {
+                                if (CurrentGameState == GameState.eFinish)
+                                {
+                                    return;
+                                }
+                                
                                 if (titleManager.AutoUpdateShow())
                                 {
-                                    if (dropManager.CanAddBottomLine(1))
-                                    {
-                                        scoreManager.AppendLevel();
+                                    dropManager.CanAddBottomLine(1);
+                                    scoreManager.AppendLevel();
 
-                                        dropManager.AddBottomLine(1,
-                                            onAddLineComplete => { CreateNewDrop(null, null, 0.3f, 0); });
-                                    }
-                                    else
-                                    {
-                                        OnGameFinished(false);
-                                    }
+                                    dropManager.AddBottomLine(1,
+                                        onAddLineComplete =>
+                                        {
+                                            if (CurrentGameState == GameState.eFinish)
+                                            {
+                                                return;
+                                            }
+
+                                            CreateNewDrop(null, null, 0.3f, 0);
+                                        });
                                 }
                                 else
                                 {
                                     CreateNewDrop(null, null, 0.3f, 0);
                                 }
                             });
-
-                            if (ifGoOn)
-                            {
-                                DropCount++;
-                                SelectIndex = i;
-                            }
-                            else
-                            {
-                                OnGameFinished(false);
-                            }
+                            
+                            DropCount++;
+                            SelectIndex = i;
 
                             return;
                         }
