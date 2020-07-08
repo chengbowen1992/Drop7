@@ -10,6 +10,7 @@ namespace Lesson2
         public int? NewValue;
         public int ScoreValue;
         public int BombCount;
+        public bool IfDie;
         
         public override void OnAppend()
         {

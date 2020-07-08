@@ -760,10 +760,18 @@ namespace Lesson2
 
             for (int i = 0; i < WIDTH-1; i++)
             {
-                var itemVal = OriginData[WIDTH - 1, i];
+                var itemVal = OriginData[HEIGHT - 1, i];
                 if (itemVal != 0)
                 {
-                    //TODO with special bomb
+                    var dieBombCmd = new BombItemCommand()
+                    {
+                        IfDie = true,
+                        DelayTime = i * 0.1f,
+                        ExecuteTime = 0.5f,
+                        Target = GetFromDrop(new Vector2Int(i, HEIGHT - 1))
+                    };
+                    
+                    dieBombGroup.AppendCommand(dieBombCmd);
                 }
             }
             

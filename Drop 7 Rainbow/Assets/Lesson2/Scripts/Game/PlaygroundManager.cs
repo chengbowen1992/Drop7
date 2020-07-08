@@ -13,6 +13,7 @@ namespace Lesson2
         public enum GameState
         {
             eGaming,
+            ePause,
             eFinish
         }
         
@@ -22,6 +23,8 @@ namespace Lesson2
 
         public Canvas Scaler;
         public Camera MainCamera;
+
+        public GameOverPanel GameOverCtrl;
         
         public AudioSource MusicPlayer;
         public AudioSource SoundPlayer;
@@ -193,10 +196,17 @@ namespace Lesson2
             CurrentGameState = GameState.eFinish;
             LocalSaveManager.GameData = "";
             LocalSaveManager.BestScore = scoreManager.Score;
-            
-            //TODO
-            ResetLevel();
-            ReStartLevel(LocalSaveManager.GameData);
+
+            GameOverCtrl.Open(() =>
+                {
+                    //TODO
+                    ResetLevel();
+                    ReStartLevel(LocalSaveManager.GameData);
+                },
+                () =>
+                {
+                    
+                });
         }
 
         //游戏循环
@@ -205,6 +215,10 @@ namespace Lesson2
             if (CurrentGameState == GameState.eGaming)
             {
                 UpdateInGaming();
+            }
+            else if (CurrentGameState == GameState.ePause)
+            {
+                UpdatePause();
             }
             else if (CurrentGameState == GameState.eFinish)
             {
@@ -299,6 +313,11 @@ namespace Lesson2
         }
 
         private void UpdateFinished()
+        {
+            
+        }
+
+        private void UpdatePause()
         {
             
         }

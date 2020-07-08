@@ -265,18 +265,28 @@ namespace Lesson2
 
             var tempColor = BgColor;
             
-            //TODO
-            BombEffect.AddEffectExt(BombEffect.transform.position, (int) FlatFXType.Explosion, tempColor, tempColor,
-                tempColor, tempColor);
-
+            if (cmd.IfDie)
+            {
+                BombEffect.AddEffectExt(BombEffect.transform.position, (int) FlatFXType.Crosslight, tempColor, tempColor,
+                    tempColor, tempColor);   
+            }
+            else
+            {
+                BombEffect.AddEffectExt(BombEffect.transform.position, (int) FlatFXType.Explosion, tempColor, tempColor,
+                    tempColor, tempColor); 
+            }
+            
             yield return new WaitForSeconds(cmd.DelayTime);
 
             float totalTime = cmd.ExecuteTime;
             var timeCounter = 0f;
 
-            BombText.text = $"+{cmd.ScoreValue * cmd.BombCount}";
-            BombTextAnimation.Play();
-            
+            if (!cmd.IfDie)
+            {
+                BombText.text = $"+{cmd.ScoreValue * cmd.BombCount}";
+                BombTextAnimation.Play();   
+            }
+
             if (totalTime > 0)
             {
                 while (timeCounter <= totalTime)
