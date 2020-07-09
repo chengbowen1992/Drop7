@@ -189,6 +189,10 @@ namespace Lesson2
         {
             SelectIndex = DefaultIndexX;
             dropManager.CreateDropItem(executeTime, dropVal, delayTime, onComplete);
+            if (true)
+            {
+                dropManager.CreateGuideItem();
+            }
         }
 
         public void OnGameFinished(bool ifWin = false)
@@ -205,7 +209,7 @@ namespace Lesson2
                 },
                 () =>
                 {
-                    
+                    ResetLevel();
                 });
         }
 

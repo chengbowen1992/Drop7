@@ -117,6 +117,11 @@ namespace Lesson2
             CreateDropItemCommand(executeTime, delayTime, onComplete);
         }
 
+        public void CreateGuideItem()
+        {
+            //TODO
+        }
+
         private int CreateDropItemInternal(int? dropVal)
         {
             int randomNum = dropVal ?? GetLevelNodeNum();
