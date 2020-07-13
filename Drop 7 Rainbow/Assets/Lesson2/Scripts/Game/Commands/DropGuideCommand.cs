@@ -15,7 +15,7 @@ namespace Lesson2
 
         public override void OnExecute()
         {
-            
+            DropMgr.DoCreateGuideCommand(this);
         }
     }
 }

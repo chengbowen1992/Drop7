@@ -38,10 +38,14 @@ namespace Lesson2
         public List<DropNode> BombList = new List<DropNode>(); //爆炸列表
         public List<DropNode> BombedList = new List<DropNode>(); //爆炸波及列表
         public List<DropNode> OutList = new List<DropNode>(); //超出区域列表
+        public List<GuideItem> GuideList = new List<GuideItem>(); //引导列表
         public List<ValueTuple<Vector2Int,Vector2Int>> MoveList = new List<ValueTuple<Vector2Int, Vector2Int>>();
         
         public Transform DropRoot;
         public DropItem DropItemOne;
+
+        public Transform GuideRoot;
+        public GuideItem GuideItemOne;
 
         public LevelCreatorBase levelCreator;
 
@@ -109,6 +113,84 @@ namespace Lesson2
             commandMgr.AppendGroup(loadGroup);
             commandMgr.Execute(onFinish);
         }
+        
+        
+        /// <summary>
+        /// 判断时候可以连锁爆炸
+        /// </summary>
+        public bool CanBombNode(int val,Vector2Int pos,bool ifAll,List<Vector2Int> guideList) 
+        {
+            int bombIndex = guideList.Count;
+            int beginX, endX;
+            beginX = endX = pos.x;
+
+            int countX = 1;
+
+            for (int i = pos.x - 1; i >= 0; i--)
+            {
+                if (OriginData[pos.y, i] == 0)
+                {
+                    break;
+                }
+                beginX = i;
+                countX++;
+            }
+
+            for (int i = pos.x + 1; i < WIDTH; i++)
+            {
+                if (OriginData[pos.y, i] == 0)
+                {
+                    break;
+                }
+                endX = i;
+                countX++;
+            }
+
+            bool ifSuccessX = val == countX;
+            for (int i = beginX; i <=endX; i++)
+            {
+                guideList.Add(new Vector2Int(i, pos.y));
+                if (OriginData[pos.y, i] == countX) 
+                {
+                    ifSuccessX = true;
+                }
+            }
+
+            if (ifSuccessX)
+            {
+                if (!ifAll)
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                guideList.RemoveRange(bombIndex, countX);
+            }
+
+            bombIndex = guideList.Count;
+
+            int countY = pos.y + 1;
+            bool ifSuccessY = val == countY;
+            for (int i = 0; i < pos.y + 1; i++)
+            {
+                guideList.Add(new Vector2Int(pos.x, i));
+                if (OriginData[i, pos.x] == countY)
+                {
+                    ifSuccessY = true;
+                }
+            }
+
+            if (ifSuccessY)
+            {
+                return true;
+            }
+            else
+            {
+                guideList.RemoveRange(bombIndex, countY);
+                return false;
+            }
+        }
 
         // 产生掉落元素 
         public void CreateDropItem(float executeTime,int? dropVal ,float delayTime,Action<bool> onComplete)
@@ -117,9 +199,35 @@ namespace Lesson2
             CreateDropItemCommand(executeTime, delayTime, onComplete);
         }
 
-        public void CreateGuideItem()
+        public void CreateAllGuideItem(bool ifAll)
         {
-            //TODO
+            if (dropValue.HasValue)
+            {
+                List<Vector2Int> guideList = new List<Vector2Int>();
+            
+                for (int i = 0; i < WIDTH; i++)
+                {
+                    bool ifSuccess = false;
+                    for (int j = 0; j < HEIGHT-1; j++)
+                    {
+                        if (OriginData[j, i] == 0)
+                        {
+                            ifSuccess = CanBombNode(dropValue.Value, new Vector2Int(i, j), ifAll, guideList);
+                            break;
+                        }
+                    }
+                    
+                    if (ifSuccess)
+                    {
+                        if (!ifAll)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                GenerateGuideItemCommand(0.3f, 0.3f, guideList);
+            }
         }
 
         private int CreateDropItemInternal(int? dropVal)
@@ -172,6 +280,8 @@ namespace Lesson2
         // 选择掉落掉落物
         public void DropDropItem(int index,Action<bool> onComplete)
         {
+            ClearAllGuideItem();
+            
             var targetIndex = DropDropItemInternal(index, dropValue.Value, OriginData);
             DropDropItemCommand(targetIndex, onComplete);
         }
@@ -514,6 +624,24 @@ namespace Lesson2
             return item;
         }
 
+        private GuideItem CreateGuideItem(Vector3 pos)
+        {
+            var item = Object.Instantiate(GuideItemOne, GuideRoot) as GuideItem;
+            item.transform.localPosition = pos;
+            item.gameObject.SetActive(true);
+            return item;
+        }
+
+        private void ClearAllGuideItem()
+        {
+            foreach (var guideItem in GuideList)
+            {
+                guideItem.Hide();
+            }
+
+            GuideList.Clear();
+        }
+
         #endregion
 
         #region 生成命令
@@ -740,6 +868,24 @@ namespace Lesson2
             return dropGroup;
         }
 
+        private void GenerateGuideItemCommand(float executeTime, float delayTime, List<Vector2Int> guideList)
+        {
+            var guideGroup = commandMgr.CreateGroup(GroupExecuteMode.eAllAtOnce, "guideGroup");
+
+            for (int i = 0; i < guideList.Count; i++)
+            {
+                var guideCmd = new DropGuideCommand()
+                {
+                    DelayTime = delayTime, ExecuteTime = executeTime, IfDropNode = false,
+                    Position = DropItem.GetPositionByIndex(guideList[i])
+                };
+                
+                guideGroup.AppendCommand(guideCmd);
+            }
+            
+            commandMgr.AppendGroup(guideGroup);
+        }
+        
         private MoveItemCommand GenerateMoveHorizontalCommand(int targetIndex,float delayTime,float executeTime)
         {
             var curPos = NewItem.transform.localPosition;
@@ -851,6 +997,13 @@ namespace Lesson2
         public void DoBombItemCommand(BombItemCommand cmd)
         {
             cmd.Target.DoBombItem(cmd);
+        }
+
+        public void DoCreateGuideCommand(DropGuideCommand cmd)
+        {
+            var item = CreateGuideItem(cmd.Position);
+            GuideList.Add(item);
+            item.Show(cmd);
         }
 
         #endregion
@@ -1085,6 +1238,8 @@ namespace Lesson2
             }
             
             DropDictionary.Clear();
+
+            ClearAllGuideItem();
             
             OutList.Clear();
             BombList.Clear();

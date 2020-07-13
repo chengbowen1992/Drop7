@@ -32,6 +32,9 @@ namespace Lesson2
         public Transform DropRoot;
         public DropItem CopyOne;
 
+        public Transform GuideRoot;
+        public GuideItem GuideOne;
+        
         public LevelTitleManager titleManager;
 
         public Random randomMgr;
@@ -105,8 +108,12 @@ namespace Lesson2
             UpdateScore(0);
             UpdateLevel(1);
             UpdateBest(scoreManager.Best);
-            
-            dropManager = new DropNodeManager {DropItemOne = CopyOne, DropRoot = DropRoot,OnGameFinished = OnGameFinished};
+
+            dropManager = new DropNodeManager
+            {
+                DropItemOne = CopyOne, DropRoot = DropRoot, GuideItemOne = GuideOne, GuideRoot = GuideRoot,
+                OnGameFinished = OnGameFinished
+            };
             BaseGameCommand.DropMgr = dropManager;
             BaseGameCommand.ScoreMgr = scoreManager;
             
@@ -189,9 +196,9 @@ namespace Lesson2
         {
             SelectIndex = DefaultIndexX;
             dropManager.CreateDropItem(executeTime, dropVal, delayTime, onComplete);
-            if (true)
+            if (false)
             {
-                dropManager.CreateGuideItem();
+                dropManager.CreateAllGuideItem(true);
             }
         }
 
